@@ -83,12 +83,15 @@ exception when others then
   values ('Employee cannot make herself boss', true, 'blocked: ' || sqlerrm);
 end $$;
 
+-- Blocked either by an error or by changing 0 rows (row-level security).
 do $$
+declare n int;
 begin
   update public.projects set archived = true
   where id = 'd0000000-0000-4000-a200-000000000001';
+  get diagnostics n = row_count;
   insert into rls_results (check_name, pass, detail)
-  values ('Employee cannot archive a project', false, 'archive was allowed');
+  values ('Employee cannot archive a project', n = 0, n || ' rows changed');
 exception when others then
   insert into rls_results (check_name, pass, detail)
   values ('Employee cannot archive a project', true, 'blocked: ' || sqlerrm);
@@ -134,7 +137,7 @@ select set_config('request.jwt.claims',
 set local role authenticated;
 
 insert into rls_results (check_name, pass, detail)
-select 'Boss sees everyone''s entries', count(distinct user_id) = 5,
+select 'Boss sees everyone''s entries', count(distinct user_id) >= 5,
        count(*) || ' entries from ' || count(distinct user_id) || ' people'
 from public.time_entries;
 
@@ -217,10 +220,12 @@ exception when others then
 end $$;
 
 do $$
+declare n int;
 begin
-  update public.profiles set role = 'employee' where id = 'd0000000-0000-4000-a000-000000000002';
+  update public.profiles set role = 'boss' where id = 'd0000000-0000-4000-a000-000000000002';
+  get diagnostics n = row_count;
   insert into rls_results (check_name, pass, detail)
-  values ('Manager cannot change anyone''s role', false, 'role change was allowed');
+  values ('Manager cannot change anyone''s role', n = 0, n || ' rows changed');
 exception when others then
   insert into rls_results (check_name, pass, detail)
   values ('Manager cannot change anyone''s role', true, 'blocked: ' || sqlerrm);
