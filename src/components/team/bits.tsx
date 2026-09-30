@@ -4,7 +4,7 @@ import type { Catalog } from "@/lib/useCatalog";
 import type { Entry } from "@/lib/data";
 import { initials } from "@/lib/people";
 import { useNow } from "@/lib/useNow";
-import { formatDuration, secondsBetween } from "@/lib/time";
+import { formatDuration, LONG_TIMER_SECONDS, secondsBetween } from "@/lib/time";
 
 export function Avatar({
   name,
@@ -39,6 +39,8 @@ export function LiveStatus({ running, catalog }: { running: Entry | undefined | 
   if (!running) return <span className="text-charcoal/60">Not clocked in</span>;
   const project = running.project_id ? catalog.projectById.get(running.project_id) : undefined;
   const task = running.task_id ? catalog.taskById.get(running.task_id) : undefined;
+  const elapsed = secondsBetween(running.start_at, new Date(now));
+  const long = elapsed > LONG_TIMER_SECONDS;
   const what = project ? `${project.name}${task ? ": " + task.name : ""}` : running.description || "No project";
   return (
     <span className="flex min-w-0 items-center gap-1 text-[#00866F]">
@@ -46,7 +48,13 @@ export function LiveStatus({ running, catalog }: { running: Entry | undefined | 
       <span className="shrink-0">·</span>
       <span className="truncate" title={what}>{what}</span>
       <span className="shrink-0">·</span>
-      <span className="tabular shrink-0">{formatDuration(secondsBetween(running.start_at, new Date(now)))}</span>
+      <span
+        className={`tabular shrink-0 ${long ? "font-semibold text-danger" : ""}`}
+        title={long ? "Running over 10 hours. Maybe forgotten?" : undefined}
+      >
+        {formatDuration(elapsed)}
+        {long && " · over 10h"}
+      </span>
     </span>
   );
 }

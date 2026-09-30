@@ -19,6 +19,7 @@ import {
   formatClock,
   formatDuration,
   formatTime,
+  LONG_TIMER_SECONDS,
   minutesOfDay,
   parseDurationInput,
   parseTimeInput,
@@ -207,9 +208,16 @@ export default function EntryBar({
         running ? (
           <div className="flex items-center gap-3 pl-1">
             <div className="flex flex-col items-end leading-tight">
-              <span className="tabular text-lg font-semibold text-navy" aria-live="off">
+              <span
+                className={`tabular text-lg font-semibold ${elapsed > LONG_TIMER_SECONDS ? "text-danger" : "text-navy"}`}
+                aria-live="off"
+                title={elapsed > LONG_TIMER_SECONDS ? "Running over 10 hours. Did you forget to stop it?" : undefined}
+              >
                 {formatDuration(elapsed)}
               </span>
+              {elapsed > LONG_TIMER_SECONDS && (
+                <span className="text-xs font-medium text-danger">Over 10 hours. Forgot to stop?</span>
+              )}
               <span className="flex items-center text-xs text-charcoal/70">
                 started
                 <InlineInput

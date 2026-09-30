@@ -119,8 +119,11 @@ export function useEntries(ownerId: string, viewerId: string, tz: string) {
     if (error || !data) return null;
     const entry = toEntry(data);
     if (draft.tag_ids.length) {
-      await db.from("time_entry_tags").insert(draft.tag_ids.map((tag_id) => ({ entry_id: entry.id, tag_id })));
-      entry.tag_ids = [...draft.tag_ids];
+      const { error: tagError } = await db
+        .from("time_entry_tags")
+        .insert(draft.tag_ids.map((tag_id) => ({ entry_id: entry.id, tag_id })));
+      if (tagError) toast("Entry saved, but its tags couldn't be added.");
+      else entry.tag_ids = [...draft.tag_ids];
     }
     return entry;
   };

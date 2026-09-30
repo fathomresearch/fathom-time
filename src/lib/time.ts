@@ -169,6 +169,9 @@ export function formatHoursShort(totalSeconds: number): string {
   return `${h.toLocaleString("en-US")}h`;
 }
 
+/** A timer running longer than this was probably forgotten. */
+export const LONG_TIMER_SECONDS = 10 * 3600;
+
 export function secondsBetween(start: string | Date, end: string | Date): number {
   return Math.max(0, (new Date(end).getTime() - new Date(start).getTime()) / 1000);
 }

@@ -1,0 +1,44 @@
+# Nightly database backup (Supabase free has no backups).
+# Based on https://supabase.com/docs/guides/deployment/ci/backups, but the
+# files are saved as a private artifact for 90 days instead of committed.
+# Needs the repo secret SUPABASE_DB_URL (Supabase > Connect > Session pooler).
+# Keep this repo private: the backup contains everyone's time entries.
+
+name: Nightly backup
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # 08:00 UTC = 3 AM Chicago (2 AM in winter)
+  workflow_dispatch: # "Run workflow" button in the Actions tab
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the secret is set
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "Add the SUPABASE_DB_URL secret in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Dump roles, schema and data
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir backup
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --data-only --use-copy
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fathom-time-backup-${{ github.run_number }}
+          path: backup/
+          retention-days: 90
