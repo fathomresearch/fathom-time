@@ -157,6 +157,12 @@ export function formatDuration(totalSeconds: number): string {
   return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
 }
 
+/** 5400 -> "1:30". Drops leftover seconds, like the Tracker's HH:MM part. */
+export function formatHoursMinutes(totalSeconds: number): string {
+  const mins = Math.floor(Math.max(0, totalSeconds) / 60);
+  return `${Math.floor(mins / 60)}:${pad(mins % 60)}`;
+}
+
 export function secondsBetween(start: string | Date, end: string | Date): number {
   return Math.max(0, (new Date(end).getTime() - new Date(start).getTime()) / 1000);
 }

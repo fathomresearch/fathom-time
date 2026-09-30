@@ -12,6 +12,9 @@ type Props = {
   taskId: string | null;
   onChange: (projectId: string | null, taskId: string | null, project: Project | null) => void;
   variant?: "bar" | "row";
+  /** Replaces the usual project label, e.g. the Timesheet's "Add new row". */
+  trigger?: React.ReactNode;
+  triggerClassName?: string;
 };
 
 export function ProjectLabel({
@@ -48,7 +51,15 @@ export function ProjectLabel({
   );
 }
 
-export default function ProjectPicker({ catalog, projectId, taskId, onChange, variant = "bar" }: Props) {
+export default function ProjectPicker({
+  catalog,
+  projectId,
+  taskId,
+  onChange,
+  variant = "bar",
+  trigger,
+  triggerClassName,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -230,10 +241,10 @@ export default function ProjectPicker({ catalog, projectId, taskId, onChange, va
       width={440}
       align="left"
       wrapperClassName={variant === "row" ? "min-w-0 shrink" : "min-w-0 shrink"}
-      triggerClassName={`flex w-full min-w-0 items-center rounded-md px-2 py-1.5 text-sm hover:bg-lightest ${
+      triggerClassName={triggerClassName ?? `flex w-full min-w-0 items-center rounded-md px-2 py-1.5 text-sm hover:bg-lightest ${
         variant === "row" ? "max-w-[290px]" : ""
       }`}
-      trigger={<ProjectLabel catalog={catalog} projectId={projectId} taskId={taskId} compact={variant === "row"} />}
+      trigger={trigger ?? <ProjectLabel catalog={catalog} projectId={projectId} taskId={taskId} compact={variant === "row"} />}
     >
       {mode === "create" ? (
         <CreateProjectForm

@@ -1,14 +1,13 @@
-import PageHeader from "@/components/PageHeader";
-import Placeholder from "@/components/Placeholder";
+import Timesheet from "@/components/timesheet/Timesheet";
+import { requireProfile } from "@/lib/auth";
 
-export default function TimesheetPage() {
+export default async function TimesheetPage() {
+  const profile = await requireProfile();
+
   return (
-    <>
-      <PageHeader title="Timesheet" />
-      <Placeholder phase={5}>
-        A Sunday to Saturday grid of hours by project and task. Editing a cell
-        updates the same entries you see in the Time Tracker.
-      </Placeholder>
-    </>
+    <Timesheet
+      ownerId={profile.id}
+      viewer={{ id: profile.id, role: profile.role, timezone: profile.timezone }}
+    />
   );
 }
