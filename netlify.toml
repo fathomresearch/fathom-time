@@ -4,3 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # These values are meant to be public (the NEXT_PUBLIC_ ones go to the
+  # browser; the others appear in the code), so Netlify's secret scan
+  # shouldn't stop the build over them. SUPABASE_SERVICE_ROLE_KEY is still scanned.
+  SECRETS_SCAN_OMIT_KEYS = "BOSS_EMAILS,DEFAULT_TIMEZONE,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY"
