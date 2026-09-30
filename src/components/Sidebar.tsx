@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
+import { ROLE_LABELS, type Role } from "@/lib/types";
 import { bossNav, footerNav, mainNav, type NavItem } from "@/lib/nav";
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
@@ -33,7 +34,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 type SidebarUser = {
   name: string;
   email: string;
-  role: "boss" | "employee";
+  role: Role;
   initials: string;
 };
 
@@ -104,7 +105,7 @@ export default function Sidebar({
             {user.name}
           </p>
           <p className="text-xs text-medium">
-            {user.role === "boss" ? "Boss" : "Employee"}
+            {ROLE_LABELS[user.role]}
           </p>
         </div>
         <form action="/auth/signout" method="post">

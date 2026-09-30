@@ -196,7 +196,7 @@ export default function ProjectPicker({
                 {t.name}
               </button>
             ))}
-            {creatingTaskFor === p.id ? (
+            {!catalog.canManage ? null : creatingTaskFor === p.id ? (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -300,15 +300,17 @@ export default function ProjectPicker({
             )}
           </div>
 
-          <div className="border-t border-light p-1.5">
-            <button
-              type="button"
-              onClick={() => setMode("create")}
-              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-blue hover:bg-lightest"
-            >
-              <CirclePlus size={16} /> Create new project
-            </button>
-          </div>
+          {catalog.canManage && (
+            <div className="border-t border-light p-1.5">
+              <button
+                type="button"
+                onClick={() => setMode("create")}
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-blue hover:bg-lightest"
+              >
+                <CirclePlus size={16} /> Create new project
+              </button>
+            </div>
+          )}
         </>
       )}
     </Popover>

@@ -29,6 +29,7 @@ Internal Clockify replacement for Fathom Research & Strategy. Phases 1 to 4 were
 - **Week starts Sunday.**
 - **Entries crossing midnight** count on the day they start; the end time shows "+1".
 - **Running timers are excluded** from totals, Timesheet and CSV. "Working now" shows them live.
+- **Roles:** boss, manager, employee (migration 002). Only the boss sees Team Overview and everyone's hours. Manager = employee plus editing on the Projects page: add, edit, archive and delete projects, tasks and clients, and the Active / Archived / Clients views. Employees see the Projects page read-only (active projects, search, favorites, their own hours) and can't create projects or tasks from the pickers. Managers and employees see only their own hours (`project_hours()`). Matches Clockify's paid-plan setting "Who can create projects and clients: Admins and project managers", except our manager covers all projects.
 - **Tags:** everyone can create, rename and delete.
 - **No locking.** Past entries are always editable.
 - **Duration input follows Clockify:** `1`-`99` = minutes, `100`+ = last two digits are minutes (`200` = 2:00), decimals = hours, `1:30`, `2h`, `90m`. The **Timesheet uses `parseDurationInput(text, "hours")`** so a plain `8` means 8 hours.
@@ -50,10 +51,11 @@ DEFAULT_TIMEZONE=America/Chicago
 ## Database (`supabase/`)
 
 - `migrations/001_schema.sql` was run in the Supabase SQL Editor. Tables: `profiles`, `clients`, `projects`, `tasks` (tasks = stages; has `budget_hours`, `sort_order`, `archived`), `tags`, `time_entries` (`end_at` null = running; `tz`; `created_by`, `updated_by`, `updated_at`), `time_entry_tags`, `favorites`.
-- Helpers `is_boss()` and `is_active_user()`. RLS on every table; employees only touch their own entries; the boss touches everyone's.
-- Triggers: profile created on sign-up; guards on role/active changes (boss can't demote or deactivate self); only boss can change `archived`; `created_by` / `updated_by` stamped from `auth.uid()` so "Edited by" can't be faked; a task must belong to the entry's project; inserting a running entry stops the person's other running entry.
+- `migrations/002_manager_role.sql`: manager role, `can_manage_projects()`, project/task/client write policies for boss + manager, `project_hours()` (boss: everyone; others: own).
+- Helpers `is_boss()`, `is_active_user()`, `can_manage_projects()`. RLS on every table; employees only touch their own entries; the boss touches everyone's.
+- Triggers: profile created on sign-up; guards on role/active changes (boss can't demote or deactivate self); only boss or manager can change `archived` (002); `created_by` / `updated_by` stamped from `auth.uid()` so "Edited by" can't be faked; a task must belong to the entry's project; inserting a running entry stops the person's other running entry.
 - FK `on delete restrict` from `time_entries` to projects and tasks: deleting a project or task with time fails. Show "Archive it instead."
-- Demo data: `seed/seed_demo.sql` (all demo IDs start with `d0000000`), removal scripts in `seed/`. `tests/rls_check.sql` must return 16 rows with pass = true.
+- Demo data: `seed/seed_demo.sql` (all demo IDs start with `d0000000`), removal scripts in `seed/`. `tests/rls_check.sql` must return 22 rows with pass = true.
 - Schema changes: write a new numbered migration file (`002_...sql`) and tell the user to run it in the SQL Editor. Don't edit 001.
 
 ## Code map

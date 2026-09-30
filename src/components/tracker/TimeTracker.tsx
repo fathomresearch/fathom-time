@@ -7,8 +7,9 @@ import { useEntries } from "@/components/tracker/useEntries";
 import { useCatalog } from "@/lib/useCatalog";
 import { useNow } from "@/lib/useNow";
 import { dayKey } from "@/lib/time";
+import { canManageProjects, type Role } from "@/lib/types";
 
-export type Viewer = { id: string; role: "boss" | "employee"; timezone: string };
+export type Viewer = { id: string; role: Role; timezone: string };
 
 /**
  * The entry bar and entry list for one person. On the Time Tracker the
@@ -26,7 +27,7 @@ export default function TimeTracker({
   onChange?: () => void;
 }) {
   const tz = viewer.timezone;
-  const catalog = useCatalog(viewer.id);
+  const catalog = useCatalog(viewer.id, canManageProjects(viewer.role));
   const api = useEntries(ownerId, viewer.id, tz);
   const now = useNow(60_000);
   const todayKey = dayKey(new Date(now), tz);

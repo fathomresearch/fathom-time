@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/auth";
-import type { Role } from "@/lib/types";
+import { ROLE_LABELS, type Role } from "@/lib/types";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -20,7 +20,7 @@ export async function setRole(userId: string, role: Role): Promise<ActionResult>
   const me = await bossOrNull();
   if (!me) return { ok: false, message: "Only the boss can change roles." };
   if (userId === me.id) return { ok: false, message: "You can't change your own role." };
-  if (role !== "boss" && role !== "employee") return { ok: false, message: "Unknown role." };
+  if (!(role in ROLE_LABELS)) return { ok: false, message: "Unknown role." };
 
   const supabase = await createClient();
   // role_initialized so a first sign-in later can't overwrite this choice.
@@ -31,7 +31,7 @@ export async function setRole(userId: string, role: Role): Promise<ActionResult>
   if (error) return { ok: false, message: "Couldn't change the role." };
 
   revalidatePath("/team");
-  return { ok: true, message: role === "boss" ? "Now a boss." : "Now an employee." };
+  return { ok: true, message: `Role changed to ${ROLE_LABELS[role]}.` };
 }
 
 /**

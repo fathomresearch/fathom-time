@@ -9,12 +9,16 @@ import ProjectRow from "@/components/projects/ProjectRow";
 import ClientsTable from "@/components/projects/ClientsTable";
 import { useProjectHours } from "@/components/projects/useProjectHours";
 import type { Viewer } from "@/components/tracker/TimeTracker";
+import { canManageProjects } from "@/lib/types";
 import { useCatalog } from "@/lib/useCatalog";
 
 export default function ProjectsView({ viewer }: { viewer: Viewer }) {
-  const catalog = useCatalog(viewer.id);
+  const catalog = useCatalog(viewer.id, canManageProjects(viewer.role));
   const { hours } = useProjectHours();
-  const isBoss = viewer.role === "boss";
+  // Boss and managers edit; employees only look and search.
+  const canManage = canManageProjects(viewer.role);
+  // Only the boss's hours include everyone's time.
+  const allHours = viewer.role === "boss";
 
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"active" | "archived" | "clients">("active");
@@ -37,7 +41,7 @@ export default function ProjectsView({ viewer }: { viewer: Viewer }) {
         .filter((p) => p.archived === showArchived)
         .filter((p) => {
           if (!q) return true;
-          const client = p.client_id ? catalog.clientById.get(p.client_id)?.name ?? "" : "";
+          const client = p.client_id ? (catalog.clientById.get(p.client_id)?.name ?? "") : "";
           return p.name.toLowerCase().includes(q) || client.toLowerCase().includes(q);
         })
         .sort((a, b) => a.name.localeCompare(b.name)),
@@ -47,29 +51,31 @@ export default function ProjectsView({ viewer }: { viewer: Viewer }) {
   return (
     <>
       <PageHeader title="Projects">
-        <Popover
-          open={creating}
-          onOpenChange={setCreating}
-          label="New project"
-          align="right"
-          width={360}
-          triggerClassName="flex h-9 items-center gap-1.5 rounded-md bg-teal px-4 font-display text-sm font-semibold text-navy hover:brightness-95"
-          trigger={
-            <>
-              <Plus size={16} /> New project
-            </>
-          }
-        >
-          <CreateProjectForm
-            catalog={catalog}
-            onCancel={() => setCreating(false)}
-            onCreated={(p) => {
-              setCreating(false);
-              setView("active");
-              setExpanded((cur) => new Set(cur).add(p.id));
-            }}
-          />
-        </Popover>
+        {canManage && (
+          <Popover
+            open={creating}
+            onOpenChange={setCreating}
+            label="New project"
+            align="right"
+            width={360}
+            triggerClassName="flex h-9 items-center gap-1.5 rounded-md bg-teal px-4 font-display text-sm font-semibold text-navy hover:brightness-95"
+            trigger={
+              <>
+                <Plus size={16} /> New project
+              </>
+            }
+          >
+            <CreateProjectForm
+              catalog={catalog}
+              onCancel={() => setCreating(false)}
+              onCreated={(p) => {
+                setCreating(false);
+                setView("active");
+                setExpanded((cur) => new Set(cur).add(p.id));
+              }}
+            />
+          </Popover>
+        )}
       </PageHeader>
 
       <div className="mb-4 flex items-center gap-3">
@@ -83,24 +89,30 @@ export default function ProjectsView({ viewer }: { viewer: Viewer }) {
             className="min-w-0 flex-1 bg-transparent text-sm focus:outline-none focus-visible:outline-none"
           />
         </label>
-        <div className="flex h-9 rounded-md border border-light bg-white p-0.5 text-sm" role="radiogroup" aria-label="Show">
-          {(["active", "archived", "clients"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              role="radio"
-              aria-checked={view === v}
-              onClick={() => setView(v)}
-              className={`rounded px-3 font-medium ${view === v ? "bg-navy text-white" : "text-charcoal hover:bg-lightest"}`}
-            >
-              {v === "active" ? "Active" : v === "archived" ? "Archived" : "Clients"}
-            </button>
-          ))}
-        </div>
+        {canManage && (
+          <div
+            className="flex h-9 rounded-md border border-light bg-white p-0.5 text-sm"
+            role="radiogroup"
+            aria-label="Show"
+          >
+            {(["active", "archived", "clients"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="radio"
+                aria-checked={view === v}
+                onClick={() => setView(v)}
+                className={`rounded px-3 font-medium ${view === v ? "bg-navy text-white" : "text-charcoal hover:bg-lightest"}`}
+              >
+                {v === "active" ? "Active" : v === "archived" ? "Archived" : "Clients"}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {view === "clients" ? (
-        <ClientsTable catalog={catalog} isBoss={isBoss} query={query} />
+        <ClientsTable catalog={catalog} canManage={canManage} query={query} />
       ) : (
         <div className="rounded-lg border border-light bg-white">
           <table className="w-full table-fixed border-collapse text-sm">
@@ -111,7 +123,7 @@ export default function ProjectsView({ viewer }: { viewer: Viewer }) {
               <col className="w-[100px]" />
               <col className="w-[80px]" />
               <col className="w-[100px]" />
-              <col className={isBoss ? "w-[120px]" : "w-[56px]"} />
+              <col className={canManage ? "w-[120px]" : "w-[56px]"} />
             </colgroup>
             <thead>
               <tr className="border-b border-light text-left font-display text-xs font-semibold text-charcoal/70">
@@ -120,8 +132,11 @@ export default function ProjectsView({ viewer }: { viewer: Viewer }) {
                 <th className="py-2.5 pl-2">Client</th>
                 <th className="py-2.5">Type</th>
                 <th className="py-2.5 pr-4 text-right">Tasks</th>
-                <th className="py-2.5 pr-4 text-right" title={isBoss ? "Everyone's time, all time" : "Your time, all time"}>
-                  {isBoss ? "Hours" : "Your hours"}
+                <th
+                  className="py-2.5 pr-4 text-right"
+                  title={allHours ? "Everyone's time, all time" : "Your time, all time"}
+                >
+                  {allHours ? "Hours" : "Your hours"}
                 </th>
                 <th aria-label="Actions" />
               </tr>
@@ -136,11 +151,13 @@ export default function ProjectsView({ viewer }: { viewer: Viewer }) {
               ) : shown.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-charcoal/70">
-                    {q
-                      ? <>Nothing matches &ldquo;{query}&rdquo;.</>
-                      : showArchived
-                        ? "No archived projects."
-                        : "No projects yet. Click New project to add one."}
+                    {q ? (
+                      <>Nothing matches &ldquo;{query}&rdquo;.</>
+                    ) : showArchived ? (
+                      "No archived projects."
+                    ) : (
+                      "No projects yet. Click New project to add one."
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -150,7 +167,8 @@ export default function ProjectsView({ viewer }: { viewer: Viewer }) {
                     project={p}
                     catalog={catalog}
                     hours={hours}
-                    isBoss={isBoss}
+                    canEdit={canManage}
+                    allHours={allHours}
                     expanded={expanded.has(p.id)}
                     onToggle={() => toggle(p.id)}
                   />
@@ -164,7 +182,7 @@ export default function ProjectsView({ viewer }: { viewer: Viewer }) {
       {view !== "clients" && (
         <p className="mt-3 text-xs text-charcoal/70">
           Hours are all-time and leave out running timers.
-          {isBoss ? " They include everyone's time." : " They include only your own time."}
+          {allHours ? " They include everyone's time." : " They include only your own time."}
         </p>
       )}
     </>

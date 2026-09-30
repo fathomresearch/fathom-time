@@ -105,7 +105,25 @@ with u as (
   where id = 'd0000000-0000-4000-a200-000000000001' returning 1
 )
 insert into rls_results (check_name, pass, detail)
-select 'Employee can edit a project''s details', count(*) = 1, count(*) || ' row updated' from u;
+select 'Employee cannot edit a project''s details', count(*) = 0, count(*) || ' rows updated' from u;
+
+do $$
+begin
+  insert into public.tasks (project_id, name)
+  values ('d0000000-0000-4000-a200-000000000001', 'rls test task');
+  insert into rls_results (check_name, pass, detail)
+  values ('Employee cannot add a task', false, 'insert was allowed');
+exception when others then
+  insert into rls_results (check_name, pass, detail)
+  values ('Employee cannot add a task', true, 'blocked: ' || sqlerrm);
+end $$;
+
+insert into rls_results (check_name, pass, detail)
+select 'Employee''s project hours are only her own',
+       coalesce((select sum(seconds) from public.project_hours()), 0)
+       = coalesce((select sum(extract(epoch from (end_at - start_at))) from public.time_entries
+                   where end_at is not null and project_id is not null), 0),
+       'totals match her own entries';
 
 -- ---------------------------------------------------------------------
 -- As Dana (boss)
@@ -162,6 +180,51 @@ begin
 end $$;
 
 update public.profiles set active = false where id = 'd0000000-0000-4000-a000-000000000005';
+update public.profiles set role = 'manager' where id = 'd0000000-0000-4000-a000-000000000003';
+
+-- ---------------------------------------------------------------------
+-- As the person just made manager (demo person 3)
+-- ---------------------------------------------------------------------
+reset role;
+select set_config('request.jwt.claims',
+  '{"sub":"d0000000-0000-4000-a000-000000000003","role":"authenticated"}', true);
+set local role authenticated;
+
+insert into rls_results (check_name, pass, detail)
+select 'Manager still sees only their own entries',
+       count(distinct user_id) = 1 and bool_and(user_id = auth.uid()),
+       count(*) || ' entries from ' || count(distinct user_id) || ' person(s)'
+from public.time_entries;
+
+insert into rls_results (check_name, pass, detail)
+select 'Manager''s project hours are only their own',
+       coalesce((select sum(seconds) from public.project_hours()), 0)
+       = coalesce((select sum(extract(epoch from (end_at - start_at))) from public.time_entries
+                   where end_at is not null and project_id is not null), 0),
+       'totals match their own entries';
+
+do $$
+declare n int;
+begin
+  update public.projects set archived = true where id = 'd0000000-0000-4000-a200-000000000001';
+  update public.projects set archived = false where id = 'd0000000-0000-4000-a200-000000000001';
+  get diagnostics n = row_count;
+  insert into rls_results (check_name, pass, detail)
+  values ('Manager can edit, archive and restore a project', n = 1, n || ' row restored');
+exception when others then
+  insert into rls_results (check_name, pass, detail)
+  values ('Manager can edit, archive and restore a project', false, 'blocked: ' || sqlerrm);
+end $$;
+
+do $$
+begin
+  update public.profiles set role = 'employee' where id = 'd0000000-0000-4000-a000-000000000002';
+  insert into rls_results (check_name, pass, detail)
+  values ('Manager cannot change anyone''s role', false, 'role change was allowed');
+exception when others then
+  insert into rls_results (check_name, pass, detail)
+  values ('Manager cannot change anyone''s role', true, 'blocked: ' || sqlerrm);
+end $$;
 
 -- ---------------------------------------------------------------------
 -- As Ethan (just deactivated)
@@ -199,5 +262,6 @@ end $$;
 -- ---------------------------------------------------------------------
 reset role;
 update public.profiles set active = true where id = 'd0000000-0000-4000-a000-000000000005';
+update public.profiles set role = 'employee' where id = 'd0000000-0000-4000-a000-000000000003';
 
 select n as "#", check_name, pass, detail from rls_results order by n;

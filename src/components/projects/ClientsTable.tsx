@@ -13,11 +13,11 @@ const iconButton = "rounded p-1.5 text-charcoal/60 hover:bg-lightest hover:text-
 /** Everyone can add and rename clients; the boss archives and deletes them. */
 export default function ClientsTable({
   catalog,
-  isBoss,
+  canManage,
   query,
 }: {
   catalog: Catalog;
-  isBoss: boolean;
+  canManage: boolean;
   query: string;
 }) {
   const [adding, setAdding] = useState(false);
@@ -51,7 +51,7 @@ export default function ClientsTable({
         <colgroup>
           <col />
           <col className="w-[120px]" />
-          <col className={isBoss ? "w-[96px]" : "w-4"} />
+          <col className={canManage ? "w-[96px]" : "w-4"} />
         </colgroup>
         <thead>
           <tr className="border-b border-light text-left font-display text-xs font-semibold text-charcoal/70">
@@ -90,7 +90,7 @@ export default function ClientsTable({
               </td>
               <td className="tabular py-1.5 pr-4 text-right text-charcoal">{projectCount(c.id)}</td>
               <td className="py-1.5 pr-2">
-                {isBoss && (
+                {canManage && (
                   <div className="flex justify-end">
                     <button
                       type="button"

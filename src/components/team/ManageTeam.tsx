@@ -75,6 +75,7 @@ export default function ManageTeam({
                     className="h-8 rounded-md border border-light bg-white px-2 text-sm focus:border-blue focus:outline-none disabled:opacity-60"
                   >
                     <option value="employee">Employee</option>
+                    <option value="manager">Manager</option>
                     <option value="boss">Boss</option>
                   </select>
                 </td>

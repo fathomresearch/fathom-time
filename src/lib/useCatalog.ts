@@ -26,7 +26,7 @@ export type ProjectPatch = Partial<
 >;
 
 /** Projects, clients, tasks, tags, favorites and names, plus ways to add to them. */
-export function useCatalog(viewerId: string) {
+export function useCatalog(viewerId: string, canManage = false) {
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -355,6 +355,8 @@ export function useCatalog(viewerId: string) {
 
   return {
     loaded,
+    /** Boss or manager: may add and edit projects, tasks and clients. */
+    canManage,
     clients,
     projects,
     tasks,

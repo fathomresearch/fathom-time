@@ -7,6 +7,7 @@ import WeekNav from "@/components/WeekNav";
 import TimeTracker, { type Viewer } from "@/components/tracker/TimeTracker";
 import { Avatar, Bar, LiveStatus, Tile } from "@/components/team/bits";
 import { useWeek } from "@/components/timesheet/useWeek";
+import { canManageProjects } from "@/lib/types";
 import { useCatalog } from "@/lib/useCatalog";
 import { useNow } from "@/lib/useNow";
 import { displayName } from "@/lib/people";
@@ -22,7 +23,7 @@ export default function PersonView({ person, viewer }: { person: PersonInfo; vie
   const todayKey = dayKey(new Date(now), tz);
   const [weekKey, setWeekKey] = useState(() => weekStart(dayKey(new Date(), tz)));
 
-  const catalog = useCatalog(viewer.id);
+  const catalog = useCatalog(viewer.id, canManageProjects(viewer.role));
   const week = useWeek(person.id, tz, weekKey, catalog);
   const sum = useMemo(() => totals(week.entries), [week.entries]);
 
