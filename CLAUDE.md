@@ -2,7 +2,7 @@
 
 # Fathom Time: handoff notes for Claude Code
 
-Internal Clockify replacement for Fathom Research & Strategy. Phases 1 to 4 were built in a claude.ai chat. Continue from Phase 5. Read this whole file before changing anything.
+Internal Clockify replacement for Fathom Research & Strategy. Phases 1 to 4 were built in a claude.ai chat; Phases 5 to 8 in Claude Code. All phases are built and the app is live. Read this whole file before changing anything.
 
 ## The person you're working with
 
@@ -18,7 +18,9 @@ Internal Clockify replacement for Fathom Research & Strategy. Phases 1 to 4 were
 - Next.js 16 (App Router, Turbopack) + TypeScript + Tailwind v4 (CSS-based config in `src/app/globals.css`, no tailwind.config). Middleware is called **proxy** in Next 16: `src/proxy.ts`.
 - Supabase: Postgres, Auth (Google), Row-Level Security. `@supabase/ssr` for cookies.
 - `lucide-react` for icons. No other UI libraries. No date library: `src/lib/time.ts` does time zone math with `Intl`.
-- Hosting (Phase 8): **Netlify free**, not Vercel. Vercel Hobby forbids commercial use.
+- Hosting: **Netlify free**, not Vercel (Vercel Hobby forbids commercial use). Live at https://fathom-time.netlify.app, deployed automatically on every push to `main` of the private repo https://github.com/fathomresearch/fathom-time. Env vars are set in Netlify; `netlify.toml` sets Node 22 and `SECRETS_SCAN_OMIT_KEYS` (the public values that would otherwise fail Netlify's secret scan).
+- Supabase Site URL and Redirect URLs, and Google OAuth JavaScript origins, include both the Netlify URL and http://localhost:3000.
+- The user pushes to GitHub from their own Terminal (a personal access token is saved in the macOS keychain; it expires Oct 30, 2026).
 - Project lives at `~/Documents/Fathom/fathom-time`. Run with `npm run dev` on http://localhost:3000.
 
 ## Decisions already made (don't reopen without asking)
@@ -73,7 +75,7 @@ DEFAULT_TIMEZONE=America/Chicago
 
 Teal `#00D6B3` accent (primary buttons use navy text on teal for contrast), Navy `#0A1628` (sidebar, headings), Blue `#2274F8` (links and interactive states only), Deep Purple `#3A3556` (avatars), grays `#F1F1F1` `#DADCDD` `#BBBCC0`, Charcoal `#2C3E50` body text, canvas `#F4F6F7`. Montserrat for headings, nav and buttons (`font-display`); IBM Plex Sans for body; `.tabular` class for times. White cards, 1px light-gray borders, no heavy shadows. Calm and professional.
 
-## Remaining phases
+## Phase specs (all built; kept for reference)
 
 ### Phase 5: Timesheet (everyone)
 - Weekly grid with week navigation (‹ This week ›). Rows = project + task, columns Sun to Sat, then row total. Footer row with daily totals and grand total. Weekends lightly shaded; today's column header blue.
@@ -103,6 +105,7 @@ Teal `#00D6B3` accent (primary buttons use navy text on teal for contrast), Navy
 - Empty and loading states, error toasts, keyboard behavior.
 - Deploy to Netlify free from a private GitHub repo in the `fathomresearch` GitHub account. Add the Netlify URL to Supabase (Site URL + Redirect URLs) and Google OAuth (JavaScript origins).
 - Optional: nightly backup (Supabase free has no backups), "Email me a sign-in link" for non-Google users, flag timers running over 10 hours.
+- Built: error/not-found/loading pages, 10-hour timer warning, `.github/workflows/backup.yml` (nightly `supabase db dump`, saved as a 90-day artifact; needs the `SUPABASE_DB_URL` repo secret, session pooler URI). Email sign-in link skipped (decided not needed).
 
 ## Later (don't build now)
 Stage-based pay (貢獻度): `budget_hours` on tasks, a `contributions` table (project_id, task_id, user_id, percent), efficiency = budgeted hours / actual hours.
