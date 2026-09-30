@@ -26,11 +26,3 @@ export async function requireProfile(): Promise<Profile> {
   if (!profile.active) redirect("/auth/signout?error=deactivated");
   return profile;
 }
-
-export function initials(name: string, email: string): string {
-  const source = name.trim() || email;
-  const parts = source.split(/[\s._-]+/).filter(Boolean);
-  const letters =
-    parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : source.slice(0, 2);
-  return letters.toUpperCase();
-}

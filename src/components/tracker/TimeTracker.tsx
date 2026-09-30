@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import EntryBar from "@/components/tracker/EntryBar";
 import EntryList from "@/components/tracker/EntryList";
 import { useEntries } from "@/components/tracker/useEntries";
@@ -14,12 +15,25 @@ export type Viewer = { id: string; role: "boss" | "employee"; timezone: string }
  * person is you; on a team member's page (Phase 7) it's them, and the boss
  * edits their time.
  */
-export default function TimeTracker({ ownerId, viewer }: { ownerId: string; viewer: Viewer }) {
+export default function TimeTracker({
+  ownerId,
+  viewer,
+  onChange,
+}: {
+  ownerId: string;
+  viewer: Viewer;
+  /** Called whenever the entries or the running timer change (the person page refreshes its totals). */
+  onChange?: () => void;
+}) {
   const tz = viewer.timezone;
   const catalog = useCatalog(viewer.id);
   const api = useEntries(ownerId, viewer.id, tz);
   const now = useNow(60_000);
   const todayKey = dayKey(new Date(now), tz);
+
+  useEffect(() => {
+    onChange?.();
+  }, [api.entries, api.running, onChange]);
 
   return (
     <>

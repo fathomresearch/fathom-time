@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, CirclePlus, Copy, X } from "lucide-react";
+import { CirclePlus, Copy, X } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import WeekNav from "@/components/WeekNav";
+import ExportCsv from "@/components/ExportCsv";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import Popover from "@/components/tracker/Popover";
 import ProjectPicker, { ProjectLabel } from "@/components/tracker/ProjectPicker";
@@ -19,7 +21,6 @@ import {
   formatHoursMinutes,
   parseDurationInput,
   shortDate,
-  weekLabel,
   weekStart,
   weekday,
 } from "@/lib/time";
@@ -86,7 +87,6 @@ export default function Timesheet({ ownerId, viewer }: { ownerId: string; viewer
   const tz = viewer.timezone;
   const now = useNow(60_000);
   const todayKey = dayKey(new Date(now), tz);
-  const thisWeek = weekStart(todayKey);
   const [weekKey, setWeekKey] = useState(() => weekStart(dayKey(new Date(), tz)));
 
   const catalog = useCatalog(viewer.id);
@@ -240,32 +240,8 @@ export default function Timesheet({ ownerId, viewer }: { ownerId: string; viewer
           </div>
         </Popover>
 
-        <div className="flex h-9 items-center rounded-md border border-light bg-white">
-          <button
-            type="button"
-            onClick={() => setWeekKey((k) => addDays(k, -7))}
-            aria-label="Previous week"
-            className="flex h-full items-center px-2 text-charcoal hover:bg-lightest"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setWeekKey(thisWeek)}
-            title={weekKey === thisWeek ? undefined : "Back to this week"}
-            className="h-full min-w-[150px] border-x border-light px-3 font-display text-sm font-semibold text-navy hover:bg-lightest"
-          >
-            {weekLabel(weekKey, todayKey)}
-          </button>
-          <button
-            type="button"
-            onClick={() => setWeekKey((k) => addDays(k, 7))}
-            aria-label="Next week"
-            className="flex h-full items-center px-2 text-charcoal hover:bg-lightest"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
+        <ExportCsv catalog={catalog} tz={tz} weekKey={weekKey} userId={ownerId} note="Your time only." />
+        <WeekNav weekKey={weekKey} todayKey={todayKey} onChange={setWeekKey} />
       </PageHeader>
 
       <div className="rounded-lg border border-light bg-white">

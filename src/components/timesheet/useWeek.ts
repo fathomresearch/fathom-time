@@ -251,5 +251,6 @@ export function useWeek(ownerId: string, tz: string, weekKey: string, catalog: C
     running,
     applyPlan,
     copyLastWeek,
+    reload: load,
   };
 }

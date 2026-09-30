@@ -1,6 +1,7 @@
 import Sidebar from "@/components/Sidebar";
 import Toaster from "@/components/Toaster";
-import { initials, requireProfile } from "@/lib/auth";
+import { requireProfile } from "@/lib/auth";
+import { initials } from "@/lib/people";
 
 export default async function AppLayout({
   children,

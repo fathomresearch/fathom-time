@@ -11,10 +11,15 @@ export async function GET(request: NextRequest) {
   const toLogin = (error: string) =>
     NextResponse.redirect(new URL(`/login?error=${error}`, url.origin));
 
+  // Deactivated people are also banned in Supabase Auth, which sends them
+  // back here with an error instead of a code.
+  const authError = `${url.searchParams.get("error_code") ?? ""} ${url.searchParams.get("error_description") ?? ""}`;
+  if (/banned/i.test(authError)) return toLogin("deactivated");
   if (!code) return toLogin("cancelled");
 
   const supabase = await createClient();
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+  if (exchangeError?.code === "user_banned") return toLogin("deactivated");
   if (exchangeError) return toLogin("failed");
 
   const {
