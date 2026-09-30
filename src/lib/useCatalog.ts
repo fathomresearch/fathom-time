@@ -21,6 +21,10 @@ export type NewProjectInput = {
   addStages: boolean;
 };
 
+export type ProjectPatch = Partial<
+  Pick<Project, "name" | "color" | "client_id" | "type" | "billable_default" | "archived">
+>;
+
 /** Projects, clients, tasks, tags, favorites and names, plus ways to add to them. */
 export function useCatalog(viewerId: string) {
   const [clients, setClients] = useState<Client[]>([]);
@@ -173,29 +177,70 @@ export function useCatalog(viewerId: string) {
     [tags]
   );
 
+  /** A new client, or the existing one with the same name. */
+  const createClient = useCallback(
+    async (name: string): Promise<Client | null> => {
+      const clean = name.trim();
+      if (!clean) return null;
+      const existing = clients.find((c) => c.name.toLowerCase() === clean.toLowerCase());
+      if (existing) return existing;
+      const { data, error } = await sb().from("clients").insert({ name: clean }).select("id,name,archived").single();
+      if (error || !data) {
+        toast("Couldn't create that client.");
+        return null;
+      }
+      setClients((cur) => [...cur, data].sort((a, b) => a.name.localeCompare(b.name)));
+      return data;
+    },
+    [clients]
+  );
+
+  const updateClient = useCallback(
+    async (id: string, patch: { name?: string; archived?: boolean }): Promise<boolean> => {
+      if (patch.name !== undefined) {
+        const clean = patch.name.trim();
+        if (!clean) return false;
+        if (clients.some((c) => c.id !== id && c.name.toLowerCase() === clean.toLowerCase())) {
+          toast(`A client called "${clean}" already exists.`);
+          return false;
+        }
+        patch = { ...patch, name: clean };
+      }
+      setClients((cur) =>
+        cur.map((c) => (c.id === id ? { ...c, ...patch } : c)).sort((a, b) => a.name.localeCompare(b.name))
+      );
+      const { error } = await sb().from("clients").update(patch).eq("id", id);
+      if (error) {
+        toast("Couldn't save that change to the client.");
+        reload();
+        return false;
+      }
+      return true;
+    },
+    [clients, reload]
+  );
+
+  /** Its projects stay, with no client (the database sets client_id to null). */
+  const deleteClient = useCallback(async (id: string): Promise<boolean> => {
+    const { error } = await sb().from("clients").delete().eq("id", id);
+    if (error) {
+      toast("Couldn't delete that client.");
+      return false;
+    }
+    setClients((cur) => cur.filter((c) => c.id !== id));
+    setProjects((cur) => cur.map((p) => (p.client_id === id ? { ...p, client_id: null } : p)));
+    return true;
+  }, []);
+
   const createProject = useCallback(
     async (input: NewProjectInput): Promise<Project | null> => {
       const db = sb();
       let clientId = input.type === "client" ? input.clientId : null;
 
       if (input.type === "client" && input.newClientName?.trim()) {
-        const name = input.newClientName.trim();
-        const existing = clients.find((c) => c.name.toLowerCase() === name.toLowerCase());
-        if (existing) {
-          clientId = existing.id;
-        } else {
-          const { data, error } = await db
-            .from("clients")
-            .insert({ name })
-            .select("id,name,archived")
-            .single();
-          if (error || !data) {
-            toast("Couldn't create that client.");
-            return null;
-          }
-          setClients((cur) => [...cur, data].sort((a, b) => a.name.localeCompare(b.name)));
-          clientId = data.id;
-        }
+        const client = await createClient(input.newClientName);
+        if (!client) return null;
+        clientId = client.id;
       }
 
       const used = new Set(projects.filter((p) => !p.archived).map((p) => p.color));
@@ -230,7 +275,82 @@ export function useCatalog(viewerId: string) {
       }
       return project as Project;
     },
-    [clients, projects]
+    [createClient, projects]
+  );
+
+  const updateProject = useCallback(
+    async (id: string, patch: ProjectPatch): Promise<boolean> => {
+      if (patch.name !== undefined) {
+        patch = { ...patch, name: patch.name.trim() };
+        if (!patch.name) return false;
+      }
+      setProjects((cur) =>
+        cur.map((p) => (p.id === id ? { ...p, ...patch } : p)).sort((a, b) => a.name.localeCompare(b.name))
+      );
+      const { error } = await sb().from("projects").update(patch).eq("id", id);
+      if (error) {
+        toast("Couldn't save that change to the project.");
+        reload();
+        return false;
+      }
+      return true;
+    },
+    [reload]
+  );
+
+  const deleteProject = useCallback(
+    async (id: string): Promise<boolean> => {
+      const { error } = await sb().from("projects").delete().eq("id", id);
+      if (error) {
+        // 23503: time entries still point at it.
+        toast(error.code === "23503" ? "This project has time. Archive it instead." : "Couldn't delete that project.");
+        return false;
+      }
+      setProjects((cur) => cur.filter((p) => p.id !== id));
+      setTasks((cur) => cur.filter((t) => t.project_id !== id));
+      return true;
+    },
+    []
+  );
+
+  const updateTask = useCallback(
+    async (id: string, patch: { name?: string; archived?: boolean }): Promise<boolean> => {
+      if (patch.name !== undefined) {
+        const clean = patch.name.trim();
+        const task = tasks.find((t) => t.id === id);
+        if (!clean || !task) return false;
+        const clash = tasks.some(
+          (t) => t.id !== id && t.project_id === task.project_id && t.name.toLowerCase() === clean.toLowerCase()
+        );
+        if (clash) {
+          toast(`This project already has a task called "${clean}".`);
+          return false;
+        }
+        patch = { ...patch, name: clean };
+      }
+      setTasks((cur) => cur.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+      const { error } = await sb().from("tasks").update(patch).eq("id", id);
+      if (error) {
+        toast("Couldn't save that change to the task.");
+        reload();
+        return false;
+      }
+      return true;
+    },
+    [tasks, reload]
+  );
+
+  const deleteTask = useCallback(
+    async (id: string): Promise<boolean> => {
+      const { error } = await sb().from("tasks").delete().eq("id", id);
+      if (error) {
+        toast(error.code === "23503" ? "This task has time. Archive it instead." : "Couldn't delete that task.");
+        return false;
+      }
+      setTasks((cur) => cur.filter((t) => t.id !== id));
+      return true;
+    },
+    []
   );
 
   return {
@@ -248,7 +368,14 @@ export function useCatalog(viewerId: string) {
     createTag,
     renameTag,
     deleteTag,
+    createClient,
+    updateClient,
+    deleteClient,
     createProject,
+    updateProject,
+    deleteProject,
+    updateTask,
+    deleteTask,
   };
 }
 

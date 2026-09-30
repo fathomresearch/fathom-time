@@ -163,6 +163,12 @@ export function formatHoursMinutes(totalSeconds: number): string {
   return `${Math.floor(mins / 60)}:${pad(mins % 60)}`;
 }
 
+/** 27000 -> "7.5h", 0 -> "0h". One decimal place. */
+export function formatHoursShort(totalSeconds: number): string {
+  const h = Math.round(Math.max(0, totalSeconds) / 360) / 10;
+  return `${h.toLocaleString("en-US")}h`;
+}
+
 export function secondsBetween(start: string | Date, end: string | Date): number {
   return Math.max(0, (new Date(end).getTime() - new Date(start).getTime()) / 1000);
 }

@@ -1,14 +1,10 @@
-import PageHeader from "@/components/PageHeader";
-import Placeholder from "@/components/Placeholder";
+import ProjectsView from "@/components/projects/ProjectsView";
+import { requireProfile } from "@/lib/auth";
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
+  const profile = await requireProfile();
+
   return (
-    <>
-      <PageHeader title="Projects" />
-      <Placeholder phase={6}>
-        Active and archived projects with client, type, tasks, hours and
-        favorites.
-      </Placeholder>
-    </>
+    <ProjectsView viewer={{ id: profile.id, role: profile.role, timezone: profile.timezone }} />
   );
 }
