@@ -1,0 +1,29 @@
+import Sidebar from "@/components/Sidebar";
+import Toaster from "@/components/Toaster";
+import { initials, requireProfile } from "@/lib/auth";
+
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const profile = await requireProfile();
+
+  return (
+    <div className="min-h-full">
+      <Sidebar
+        isBoss={profile.role === "boss"}
+        user={{
+          name: profile.name || profile.email,
+          email: profile.email,
+          role: profile.role,
+          initials: initials(profile.name, profile.email),
+        }}
+      />
+      <main className="ml-60 min-h-full px-10 py-8">
+        <div className="mx-auto max-w-[1180px]">{children}</div>
+      </main>
+      <Toaster />
+    </div>
+  );
+}

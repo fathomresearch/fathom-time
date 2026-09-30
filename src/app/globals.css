@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/*
+  Fathom brand tokens.
+  Navy follows fathomresearch.ai (theme color #0A1628).
+  The printed brand guide lists #071A2B. Swap the value below if you prefer it.
+*/
+@theme {
+  --color-teal: #00d6b3;
+  --color-teal-soft: #e0faf5;
+  --color-navy: #0a1628;
+  --color-navy-raised: #14243a;
+  --color-blue: #2274f8;
+  --color-purple: #3a3556;
+  --color-lightest: #f1f1f1;
+  --color-light: #dadcdd;
+  --color-medium: #bbbcc0;
+  --color-charcoal: #2c3e50;
+  --color-canvas: #f4f6f7;
+  --color-danger: #d93f45;
+
+  --font-display: var(--font-montserrat), "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-plex), "Segoe UI", system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Times and durations line up in columns. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-blue);
+    outline-offset: 2px;
+  }
+}
