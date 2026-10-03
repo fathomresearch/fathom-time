@@ -48,16 +48,3 @@ export const STATUS_CLASS: Record<BudgetStatus, string> = {
 
 /** 8 -> "8.0", 0 -> "". Budgets read like the spreadsheet. */
 export const hoursCell = (h: number) => (h > 0.005 ? h.toFixed(1) : "");
-
-/** Starting tasks for a new budget template (from Fathom's budget sheet). */
-export const TEMPLATE_TASKS = [
-  "Questionnaire / discussion guide development",
-  "Survey programming",
-  "Field management & QA",
-  "Data processing & tabulation",
-  "Analysis",
-  "Reporting",
-  "Client meetings & presentation",
-  "Project management",
-  "Other (describe)",
-];

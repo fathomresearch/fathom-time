@@ -1,7 +1,7 @@
 // Reading and writing budget spreadsheets (.xlsx) with SheetJS.
 // SheetJS is loaded only when a sheet is actually read or written.
 
-import { LEVELS, TEMPLATE_TASKS, type Level, type LevelHours } from "@/lib/budget";
+import { LEVELS, type Level, type LevelHours } from "@/lib/budget";
 
 export type SheetTask = { name: string } & LevelHours;
 export type ParsedBudget = { projectName: string; clientName: string; tasks: SheetTask[] };
@@ -91,22 +91,14 @@ export function parseBudgetRows(rows: unknown[][]): ParsedBudget | null {
   };
 }
 
-/** An empty Fathom Time budget template. */
-export async function downloadTemplate() {
-  const XLSX = await loadXlsx();
-  const rows: (string | number | null)[][] = [
-    ["Project", ""],
-    ["Client", ""],
-    [],
-    ["Budgeted hours by level. Change, add or remove tasks as needed."],
-    ["Task", "Director", "Manager", "Analyst"],
-    ...TEMPLATE_TASKS.map((t) => [t, null, null, null]),
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"] = [{ wch: 46 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Budget");
-  XLSX.writeFile(wb, "Fathom Time budget template.xlsx");
+/** The budget template (public/templates), saved under its friendly name. */
+export function downloadTemplate() {
+  const a = document.createElement("a");
+  a.href = "/templates/fathom-time-budgeted-hours-template.xlsx";
+  a.download = "Fathom Time Budgeted Hours Template.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 /** Writes any table of rows as a one-sheet .xlsx download. */
