@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { ROLE_LABELS, type Role } from "@/lib/types";
-import { bossNav, footerNav, mainNav, type NavItem } from "@/lib/nav";
+import { footerNav, leadNav, mainNav, type NavItem } from "@/lib/nav";
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
@@ -39,10 +39,11 @@ type SidebarUser = {
 };
 
 export default function Sidebar({
-  isBoss,
+  isLead,
   user,
 }: {
-  isBoss: boolean;
+  /** Director or manager: sees the Manage section. */
+  isLead: boolean;
   user: SidebarUser;
 }) {
   const pathname = usePathname();
@@ -69,10 +70,10 @@ export default function Sidebar({
           <NavLink key={item.href} item={item} active={isActive(item.href)} />
         ))}
 
-        {isBoss && (
+        {isLead && (
           <>
             <p className="mt-6 mb-1 px-3 text-xs text-medium/70">Manage</p>
-            {bossNav.map((item) => (
+            {leadNav.map((item) => (
               <NavLink
                 key={item.href}
                 item={item}

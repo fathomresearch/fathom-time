@@ -7,15 +7,22 @@ import { Avatar } from "@/components/team/bits";
 import type { TeamPerson } from "@/components/team/useTeamWeek";
 import { setActive, setRole } from "@/app/(app)/team/actions";
 import { displayName } from "@/lib/people";
-import type { Role } from "@/lib/types";
+import { ROLE_LABELS, type Role } from "@/lib/types";
 
+/**
+ * The Director moves people between Manager and Analyst and can deactivate
+ * anyone else. A Manager can only deactivate or reactivate Analysts. The
+ * Director's own role and access are fixed.
+ */
 export default function ManageTeam({
   people,
   viewerId,
+  viewerRole,
   onChanged,
 }: {
   people: TeamPerson[];
   viewerId: string;
+  viewerRole: Role;
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -53,6 +60,9 @@ export default function ManageTeam({
         <tbody>
           {sorted.map((p) => {
             const self = p.id === viewerId;
+            const canSetRole = viewerRole === "director" && !self && p.role !== "director";
+            const canSetAccess =
+              !self && p.role !== "director" && (viewerRole === "director" || p.role === "analyst");
             return (
               <tr key={p.id} className={`border-b border-light last:border-0 ${p.active ? "" : "text-charcoal/60"}`}>
                 <td className="px-4 py-2.5">
@@ -66,22 +76,24 @@ export default function ManageTeam({
                 </td>
                 <td className="truncate py-2.5 pr-3">{p.email}</td>
                 <td className="py-2.5">
-                  <select
-                    value={p.role}
-                    disabled={self || busy === p.id}
-                    title={self ? "You can't change your own role." : undefined}
-                    onChange={(e) => run(p.id, () => setRole(p.id, e.target.value as Role))}
-                    aria-label={`Role for ${displayName(p)}`}
-                    className="h-8 rounded-md border border-light bg-white px-2 text-sm focus:border-blue focus:outline-none disabled:opacity-60"
-                  >
-                    <option value="employee">Employee</option>
-                    <option value="manager">Manager</option>
-                    <option value="boss">Boss</option>
-                  </select>
+                  {canSetRole ? (
+                    <select
+                      value={p.role}
+                      disabled={busy === p.id}
+                      onChange={(e) => run(p.id, () => setRole(p.id, e.target.value as Role))}
+                      aria-label={`Role for ${displayName(p)}`}
+                      className="h-8 rounded-md border border-light bg-white px-2 text-sm focus:border-blue focus:outline-none disabled:opacity-60"
+                    >
+                      <option value="analyst">Analyst</option>
+                      <option value="manager">Manager</option>
+                    </select>
+                  ) : (
+                    <span className="px-2">{ROLE_LABELS[p.role]}</span>
+                  )}
                 </td>
                 <td className="px-4 py-2.5 text-right">
-                  {self ? (
-                    <span className="text-xs text-charcoal/60">Active</span>
+                  {!canSetAccess ? (
+                    <span className="text-xs text-charcoal/60">{p.active ? "Active" : "Deactivated"}</span>
                   ) : p.active ? (
                     <button
                       type="button"

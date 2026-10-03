@@ -63,7 +63,7 @@ export async function checkSetup(): Promise<SetupItem[]> {
         : "SUPABASE_SERVICE_ROLE_KEY is empty. Sign-in needs it.",
     },
     {
-      label: "Boss emails",
+      label: "Director emails (BOSS_EMAILS)",
       ok: bosses.length > 0,
       detail: bosses.length ? bosses.join(", ") : "BOSS_EMAILS is empty",
     },

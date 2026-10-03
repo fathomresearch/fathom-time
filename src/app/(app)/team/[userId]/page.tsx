@@ -2,13 +2,14 @@ import { notFound } from "next/navigation";
 import NoAccess from "@/components/NoAccess";
 import PersonView from "@/components/team/PersonView";
 import { requireProfile } from "@/lib/auth";
+import { isLead } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function PersonPage({
   params,
 }: PageProps<"/team/[userId]">) {
   const profile = await requireProfile();
-  if (profile.role !== "boss") return <NoAccess />;
+  if (!isLead(profile.role)) return <NoAccess />;
   const { userId } = await params;
 
   const supabase = await createClient();

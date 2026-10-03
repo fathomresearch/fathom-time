@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Fathom Time: OPTIONAL demo data
 --
--- Adds 5 demo people (1 boss, 4 employees), 2 clients, 6 projects with
+-- Adds 5 demo people (1 director, 4 analysts), 2 clients, 6 projects with
 -- tasks, 4 tags, about 4 weeks of weekday entries, and 2 running timers.
 --
 -- Demo people use @example.com addresses and cannot sign in.
@@ -66,7 +66,7 @@ begin
     (ethan,  'ethan.demo@example.com',  'Ethan Brooks')
   ) as u(id, email, name);
 
-  update public.profiles set role = 'boss', timezone = 'America/Chicago',     role_initialized = true where id = boss;
+  update public.profiles set role = 'director', timezone = 'America/Chicago',     role_initialized = true where id = boss;
   update public.profiles set timezone = 'America/New_York',    role_initialized = true where id = priya;
   update public.profiles set timezone = 'America/Chicago',     role_initialized = true where id = marcus;
   update public.profiles set timezone = 'America/Los_Angeles', role_initialized = true where id = sofia;

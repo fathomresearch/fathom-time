@@ -26,12 +26,12 @@ Internal Clockify replacement for Fathom Research & Strategy. Phases 1 to 4 were
 ## Decisions already made (don't reopen without asking)
 
 - **Sign-up is open.** Anyone with a Google account can sign in and becomes an employee. `ALLOWED_EMAIL_DOMAIN` is blank. Most people use Gmail. Deactivate in Manage team is the off switch.
-- **Boss** = emails in `BOSS_EMAILS`, applied only on a person's first sign-in (`profiles.role_initialized`). After that the database role is the source of truth. Currently `admin@fathomresearch.ai` for testing; will switch to the real boss later.
+- **Director** (formerly "boss") = emails in `BOSS_EMAILS`, applied only on a person's first sign-in (`profiles.role_initialized`). After that the database role is the source of truth. Currently `admin@fathomresearch.ai` for testing; will switch to the real boss later.
 - **Time zones:** each person picks one in Settings (default from browser on first sign-in, fallback America/Chicago). Everything is shown in the **viewer's** zone, like Clockify's "Viewer time zone". Entries also store `tz` (owner's zone when recorded).
 - **Week starts Sunday.**
 - **Entries crossing midnight** count on the day they start; the end time shows "+1".
 - **Running timers are excluded** from totals, Timesheet and CSV. "Working now" shows them live.
-- **Roles:** boss, manager, employee (migration 002). Only the boss sees Team Overview and everyone's hours. Manager = employee plus editing on the Projects page: add, edit, archive and delete projects, tasks and clients, and the Active / Archived / Clients views. Employees see the Projects page read-only (active projects, search, favorites, their own hours) and can't create projects or tasks from the pickers. Managers and employees see only their own hours (`project_hours()`). Matches Clockify's paid-plan setting "Who can create projects and clients: Admins and project managers", except our manager covers all projects.
+- **Roles (migration 003):** Director (was boss), Manager, Analyst (was employee). Everyone can add, edit, archive and delete projects, tasks and clients. Director and Manager both get Team Overview, see and edit everyone's time, CSV, budgets and imports. Only the Director moves people between Manager and Analyst; the Director role is fixed (can't be given, removed or deactivated in the app; change it only in SQL). Director can deactivate anyone else; a Manager only Analysts. Roles double as budget levels; a person's level on a project is saved when they first log time on it (promotions only affect new projects). `isLead(role)` in `src/lib/types.ts`; `is_lead()` / `is_director()` in SQL. `BOSS_EMAILS` still names the first-sign-in Director.
 - **Tags:** everyone can create, rename and delete.
 - **No locking.** Past entries are always editable.
 - **Duration input follows Clockify:** `1`-`99` = minutes, `100`+ = last two digits are minutes (`200` = 2:00), decimals = hours, `1:30`, `2h`, `90m`. The **Timesheet uses `parseDurationInput(text, "hours")`** so a plain `8` means 8 hours.
@@ -54,10 +54,11 @@ DEFAULT_TIMEZONE=America/Chicago
 
 - `migrations/001_schema.sql` was run in the Supabase SQL Editor. Tables: `profiles`, `clients`, `projects`, `tasks` (tasks = stages; has `budget_hours`, `sort_order`, `archived`), `tags`, `time_entries` (`end_at` null = running; `tz`; `created_by`, `updated_by`, `updated_at`), `time_entry_tags`, `favorites`.
 - `migrations/002_manager_role.sql`: manager role, `can_manage_projects()`, project/task/client write policies for boss + manager, `project_hours()` (boss: everyone; others: own).
-- Helpers `is_boss()`, `is_active_user()`, `can_manage_projects()`. RLS on every table; employees only touch their own entries; the boss touches everyone's.
-- Triggers: profile created on sign-up; guards on role/active changes (boss can't demote or deactivate self); only boss or manager can change `archived` (002); `created_by` / `updated_by` stamped from `auth.uid()` so "Edited by" can't be faked; a task must belong to the entry's project; inserting a running entry stops the person's other running entry.
+- `migrations/003_director_manager_analyst.sql`: role rename, `is_director()`, `is_lead()`, new profile guard, projects open to everyone, `project_hours()` for leads. Drops `is_boss()`, `can_manage_projects()`, `guard_archive()`.
+- Helpers `is_director()`, `is_lead()`, `is_active_user()`. RLS on every table; analysts only touch their own entries; directors and managers touch everyone's.
+- Triggers: profile created on sign-up; guards on role/active changes (boss can't demote or deactivate self); (the archive guard was removed in 003; anyone can archive); `created_by` / `updated_by` stamped from `auth.uid()` so "Edited by" can't be faked; a task must belong to the entry's project; inserting a running entry stops the person's other running entry.
 - FK `on delete restrict` from `time_entries` to projects and tasks: deleting a project or task with time fails. Show "Archive it instead."
-- Demo data: `seed/seed_demo.sql` (all demo IDs start with `d0000000`), removal scripts in `seed/`. `tests/rls_check.sql` must return 22 rows with pass = true.
+- Demo data: `seed/seed_demo.sql` (all demo IDs start with `d0000000`), removal scripts in `seed/`. `tests/rls_check.sql` creates its own temporary test people (IDs `e0000000…`), removes them at the end, and must return 22 rows with pass = true. It doesn't need the demo data.
 - Schema changes: write a new numbered migration file (`002_...sql`) and tell the user to run it in the SQL Editor. Don't edit 001.
 
 ## Code map

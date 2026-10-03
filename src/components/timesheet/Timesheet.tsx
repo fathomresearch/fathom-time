@@ -12,7 +12,6 @@ import InlineInput from "@/components/tracker/InlineInput";
 import { toast } from "@/components/Toaster";
 import type { Viewer } from "@/components/tracker/TimeTracker";
 import { buildGrid, planCell, rowKey, splitKey, useWeek } from "@/components/timesheet/useWeek";
-import { canManageProjects } from "@/lib/types";
 import { useCatalog, type Catalog } from "@/lib/useCatalog";
 import { useNow } from "@/lib/useNow";
 import type { Entry } from "@/lib/data";
@@ -90,7 +89,7 @@ export default function Timesheet({ ownerId, viewer }: { ownerId: string; viewer
   const todayKey = dayKey(new Date(now), tz);
   const [weekKey, setWeekKey] = useState(() => weekStart(dayKey(new Date(), tz)));
 
-  const catalog = useCatalog(viewer.id, canManageProjects(viewer.role));
+  const catalog = useCatalog(viewer.id);
   const week = useWeek(ownerId, tz, weekKey, catalog);
   const kept = useKeptRows(ownerId, weekKey);
   const [copyOpen, setCopyOpen] = useState(false);

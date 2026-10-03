@@ -10,7 +10,6 @@ import ManageTeam from "@/components/team/ManageTeam";
 import { Tile } from "@/components/team/bits";
 import { useTeamWeek } from "@/components/team/useTeamWeek";
 import type { Viewer } from "@/components/tracker/TimeTracker";
-import { canManageProjects } from "@/lib/types";
 import { useCatalog } from "@/lib/useCatalog";
 import { useNow } from "@/lib/useNow";
 import { displayName } from "@/lib/people";
@@ -31,7 +30,7 @@ export default function TeamOverview({ viewer }: { viewer: Viewer }) {
   const [weekKey, setWeekKey] = useState(() => weekStart(dayKey(new Date(), tz)));
   const [tab, setTab] = useState<Tab>("person");
 
-  const catalog = useCatalog(viewer.id, canManageProjects(viewer.role));
+  const catalog = useCatalog(viewer.id);
   const team = useTeamWeek(tz, weekKey);
 
   const byPerson = useMemo(() => weekByPerson(team.entries, weekKey, tz), [team.entries, weekKey, tz]);
@@ -92,7 +91,7 @@ export default function TeamOverview({ viewer }: { viewer: Viewer }) {
         ) : tab === "project" ? (
           <ByProject tree={tree} catalog={catalog} nameOf={nameOf} />
         ) : (
-          <ManageTeam people={team.people} viewerId={viewer.id} onChanged={team.reload} />
+          <ManageTeam people={team.people} viewerId={viewer.id} viewerRole={viewer.role} onChanged={team.reload} />
         )}
       </div>
     </>

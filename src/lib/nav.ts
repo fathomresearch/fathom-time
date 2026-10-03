@@ -11,7 +11,6 @@ export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  bossOnly?: boolean;
 };
 
 export const mainNav: NavItem[] = [
@@ -20,8 +19,9 @@ export const mainNav: NavItem[] = [
   { href: "/projects", label: "Projects", icon: FolderKanban },
 ];
 
-export const bossNav: NavItem[] = [
-  { href: "/team", label: "Team Overview", icon: Users, bossOnly: true },
+// Directors and managers only.
+export const leadNav: NavItem[] = [
+  { href: "/team", label: "Team Overview", icon: Users },
 ];
 
 export const footerNav: NavItem[] = [

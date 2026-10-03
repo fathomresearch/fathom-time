@@ -9,7 +9,7 @@ export default function NoAccess() {
         You don&apos;t have access to this page
       </h1>
       <p className="mt-1 text-sm text-charcoal">
-        Only the boss can see team information.
+        Only the Director and Managers can see team information.
       </p>
       <Link
         href="/tracker"

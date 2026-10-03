@@ -12,7 +12,7 @@ export type Hours = {
 
 /**
  * All-time hours per project and task, added up in the database
- * (project_hours() in migration 002). Boss and managers get everyone's
+ * (project_hours(), migration 003). Directors and managers get everyone's
  * totals; anyone else only their own. Running timers are left out.
  */
 export function useProjectHours() {

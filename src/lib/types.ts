@@ -1,9 +1,9 @@
-export type Role = "boss" | "manager" | "employee";
+export type Role = "director" | "manager" | "analyst";
 
-/** Boss and managers add and edit projects, tasks and clients. */
-export const canManageProjects = (role: Role) => role === "boss" || role === "manager";
+/** Director or manager: Team Overview, everyone's time, budgets, imports. */
+export const isLead = (role: Role) => role === "director" || role === "manager";
 
-export const ROLE_LABELS: Record<Role, string> = { boss: "Boss", manager: "Manager", employee: "Employee" };
+export const ROLE_LABELS: Record<Role, string> = { director: "Director", manager: "Manager", analyst: "Analyst" };
 
 export type Profile = {
   id: string;

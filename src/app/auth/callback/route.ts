@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     await admin
       .from("profiles")
       .update({
-        role: bossEmails().includes(email) ? "boss" : "employee",
+        role: bossEmails().includes(email) ? "director" : "analyst",
         role_initialized: true,
         timezone: isValidTimezone(browserTz) ? browserTz : profile.timezone,
       })

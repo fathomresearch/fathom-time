@@ -10,16 +10,8 @@ import type { Client } from "@/lib/data";
 
 const iconButton = "rounded p-1.5 text-charcoal/60 hover:bg-lightest hover:text-navy";
 
-/** Everyone can add and rename clients; the boss archives and deletes them. */
-export default function ClientsTable({
-  catalog,
-  canManage,
-  query,
-}: {
-  catalog: Catalog;
-  canManage: boolean;
-  query: string;
-}) {
+/** Clients: everyone can add, rename, archive and delete them. */
+export default function ClientsTable({ catalog, query }: { catalog: Catalog; query: string }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [deleting, setDeleting] = useState<Client | null>(null);
@@ -51,7 +43,7 @@ export default function ClientsTable({
         <colgroup>
           <col />
           <col className="w-[120px]" />
-          <col className={canManage ? "w-[96px]" : "w-4"} />
+          <col className="w-[96px]" />
         </colgroup>
         <thead>
           <tr className="border-b border-light text-left font-display text-xs font-semibold text-charcoal/70">
@@ -90,28 +82,26 @@ export default function ClientsTable({
               </td>
               <td className="tabular py-1.5 pr-4 text-right text-charcoal">{projectCount(c.id)}</td>
               <td className="py-1.5 pr-2">
-                {canManage && (
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => catalog.updateClient(c.id, { archived: !c.archived })}
-                      aria-label={c.archived ? `Restore ${c.name}` : `Archive ${c.name}`}
-                      title={c.archived ? "Restore" : "Archive (hides it from client lists)"}
-                      className={iconButton}
-                    >
-                      {c.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleting(c)}
-                      aria-label={`Delete ${c.name}`}
-                      title="Delete"
-                      className="rounded p-1.5 text-charcoal/60 hover:bg-lightest hover:text-danger"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                )}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => catalog.updateClient(c.id, { archived: !c.archived })}
+                    aria-label={c.archived ? `Restore ${c.name}` : `Archive ${c.name}`}
+                    title={c.archived ? "Restore" : "Archive (hides it from client lists)"}
+                    className={iconButton}
+                  >
+                    {c.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleting(c)}
+                    aria-label={`Delete ${c.name}`}
+                    title="Delete"
+                    className="rounded p-1.5 text-charcoal/60 hover:bg-lightest hover:text-danger"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -129,7 +119,10 @@ export default function ClientsTable({
                     aria-label="New client name"
                     className="h-8 w-64 rounded-md border border-light px-2.5 text-sm focus:border-blue focus:outline-none"
                   />
-                  <button type="submit" className="h-8 rounded-md bg-teal px-3 font-display text-xs font-semibold text-navy">
+                  <button
+                    type="submit"
+                    className="h-8 rounded-md bg-teal px-3 font-display text-xs font-semibold text-navy"
+                  >
                     Add
                   </button>
                 </form>

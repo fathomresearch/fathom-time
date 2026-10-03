@@ -2,6 +2,7 @@ import Sidebar from "@/components/Sidebar";
 import Toaster from "@/components/Toaster";
 import { requireProfile } from "@/lib/auth";
 import { initials } from "@/lib/people";
+import { isLead } from "@/lib/types";
 
 export default async function AppLayout({
   children,
@@ -13,7 +14,7 @@ export default async function AppLayout({
   return (
     <div className="min-h-full">
       <Sidebar
-        isBoss={profile.role === "boss"}
+        isLead={isLead(profile.role)}
         user={{
           name: profile.name || profile.email,
           email: profile.email,

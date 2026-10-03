@@ -14,7 +14,7 @@ export type TeamPerson = Pick<Profile, "id" | "name" | "email" | "role" | "activ
 
 /**
  * Everyone's stopped entries for one week, everyone's running timers, and
- * the people list. Boss only: row-level security returns everything.
+ * the people list. Directors and managers only: row-level security returns everything.
  */
 export function useTeamWeek(tz: string, weekKey: string) {
   const [people, setPeople] = useState<TeamPerson[]>([]);

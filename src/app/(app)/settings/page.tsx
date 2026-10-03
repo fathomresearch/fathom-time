@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const profile = await requireProfile();
-  const isBoss = profile.role === "boss";
-  const items = isBoss ? await checkSetup() : [];
+  const isDirector = profile.role === "director";
+  const items = isDirector ? await checkSetup() : [];
   const allZones = Intl.supportedValuesOf("timeZone");
 
   return (
@@ -28,7 +28,7 @@ export default async function SettingsPage() {
         />
       </section>
 
-      {isBoss && (
+      {isDirector && (
         <section className="rounded-lg border border-light bg-white">
           <div className="border-b border-light px-6 py-4">
             <h2 className="font-display text-base font-semibold text-navy">
@@ -36,7 +36,7 @@ export default async function SettingsPage() {
             </h2>
             <p className="mt-1 text-sm text-charcoal">
               Reads your <code>.env.local</code>. Restart{" "}
-              <code>npm run dev</code> after editing it. Only the boss sees
+              <code>npm run dev</code> after editing it. Only the Director sees
               this.
             </p>
           </div>
