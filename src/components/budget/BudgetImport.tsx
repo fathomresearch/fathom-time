@@ -304,7 +304,7 @@ export default function BudgetImport({
                 </div>
 
                 {draft.mode === "new" ? (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 items-start gap-3">
                     <label className="grid gap-1 text-xs text-charcoal/70">
                       Project name
                       <input
