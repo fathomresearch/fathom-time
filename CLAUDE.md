@@ -99,7 +99,7 @@ Teal `#00D6B3` accent (primary buttons use navy text on teal for contrast), Navy
 - Header: week navigation ("Back to this week" when elsewhere) and Export CSV for the range.
 - Tiles: Team hours, Billable share %, People who logged time, Working right now (pulsing teal dot if > 0).
 - Tab "By person": avatar initials, teal dot if running, name, "Working now · Project: Task · 01:23:05" or "Not clocked in", hours per day ("7.5h" or "–"), Total, Billable; footer totals; row opens the person page.
-- Tab "By project": horizontal bars, project → stage/task → each person's hours and % share within the stage; single teal color scaled to the largest item at that level. Footnote: "Share of each person within a stage is the starting point for contribution-based pay (貢獻度) later."
+- Tab "By project": horizontal bars, project → stage/task → each person's hours and % share within the stage; single teal color scaled to the largest item at that level. Footnote: "Share of each person within a stage is the starting point for contribution-based pay later."
 - Tab "Manage team": role dropdown (Employee/Boss), Deactivate/Reactivate. Boss can't demote or deactivate self. Deactivation should also ban the user in Supabase Auth via the admin client.
 - Person page `/team/[userId]`: back link, avatar, name, live status, week navigation, tiles (hours, billable + %), "Hours by project" bars, and `<TimeTracker ownerId={userId} viewer={boss} />` so the boss can add, edit, delete, start or stop their time.
 - CSV: boss exports everyone, employees only themselves, date range. Columns: Date, User, Client, Project, Project type, Task/Stage, Description, Tags, Billable, Start, End, Hours (decimal, 2 places). Totals must match Team Overview.
@@ -111,7 +111,7 @@ Teal `#00D6B3` accent (primary buttons use navy text on teal for contrast), Navy
 - Built: error/not-found/loading pages, 10-hour timer warning, `.github/workflows/backup.yml` (nightly `supabase db dump`, saved as a 90-day artifact; needs the `SUPABASE_DB_URL` repo secret, session pooler URI). Email sign-in link skipped (decided not needed).
 
 ## Later (don't build now)
-Stage-based pay (貢獻度): `budget_hours` on tasks, a `contributions` table (project_id, task_id, user_id, percent), efficiency = budgeted hours / actual hours.
+Stage-based (contribution-based) pay: `budget_hours` on tasks, a `contributions` table (project_id, task_id, user_id, percent), efficiency = budgeted hours / actual hours.
 
 ## Checks before handing back
 - `npx eslint src` and `npx tsc --noEmit` pass.

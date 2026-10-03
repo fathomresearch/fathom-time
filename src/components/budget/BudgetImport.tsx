@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { FileUp, Plus, X } from "lucide-react";
 import { toast } from "@/components/Toaster";
 import { saveProjectBudget, type BudgetRow } from "@/components/budget/useProjectBudget";
-import { LEVELS, LEVEL_LABELS, type LevelHours } from "@/lib/budget";
+import { LEVELS, LEVEL_LABELS, LEVEL_STYLE, type LevelHours } from "@/lib/budget";
 import { parseBudgetRows, readWorkbook } from "@/lib/budgetSheet";
 import type { Catalog } from "@/lib/useCatalog";
 
@@ -267,7 +267,10 @@ export default function BudgetImport({
                     <th className="py-2">Task</th>
                     {LEVELS.map((l) => (
                       <th key={l} className="py-2 text-center">
-                        {LEVEL_LABELS[l]}
+                        <span className={`inline-flex items-center gap-1.5 ${LEVEL_STYLE[l].text}`}>
+                          <span className={`h-2 w-2 rounded-full ${LEVEL_STYLE[l].dot}`} />
+                          {LEVEL_LABELS[l]}
+                        </span>
                       </th>
                     ))}
                     <th aria-label="Remove" />

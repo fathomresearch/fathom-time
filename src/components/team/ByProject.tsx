@@ -111,7 +111,7 @@ export default function ByProject({
         ))
       )}
       <p className="border-t border-light px-5 py-3 text-xs text-charcoal/70">
-        Share of each person within a stage is the starting point for contribution-based pay (貢獻度) later. Budget
+        Share of each person within a stage is the starting point for contribution-based pay later. Budget
         use always compares all-time hours with the project&apos;s budget, whatever range is shown.
       </p>
     </div>

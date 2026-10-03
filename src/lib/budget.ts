@@ -7,6 +7,13 @@ export type Level = Role;
 export const LEVELS: Level[] = ["director", "manager", "analyst"];
 export const LEVEL_LABELS = ROLE_LABELS;
 
+/** Level colors from the Fathom palette: Deep Purple, Blue, Teal. */
+export const LEVEL_STYLE: Record<Level, { dot: string; text: string; soft: string; faint: string }> = {
+  director: { dot: "bg-purple", text: "text-purple", soft: "bg-[#ECEAF3]", faint: "bg-[#F6F5F9]" },
+  manager: { dot: "bg-blue", text: "text-blue", soft: "bg-[#E6EFFE]", faint: "bg-[#F3F7FF]" },
+  analyst: { dot: "bg-teal", text: "text-[#00866F]", soft: "bg-teal-soft", faint: "bg-[#F2FDFB]" },
+};
+
 export type LevelHours = Record<Level, number>;
 export const emptyLevels = (): LevelHours => ({ director: 0, manager: 0, analyst: 0 });
 export const sumLevels = (h: LevelHours) => h.director + h.manager + h.analyst;
