@@ -1,5 +1,5 @@
 -- =====================================================================
--- Fathom Time: security check (run after migration 003)
+-- Fathom Time: security check (run after migrations 003 to 005)
 -- Creates temporary test people (IDs start with e0000000), signs in as
 -- each behind the scenes, and tries things they should and should not be
 -- able to do. Removes everything it created at the end; real data is
@@ -36,6 +36,9 @@ update public.profiles set role = 'analyst', active = false, role_initialized = 
 
 insert into public.projects (id, name, type, created_by)
 values ('e0000000-0000-4000-a200-000000000001', 'RLS test project', 'internal', 'e0000000-0000-4000-a000-000000000001');
+
+insert into public.tasks (id, project_id, name)
+values ('e0000000-0000-4000-a300-000000000001', 'e0000000-0000-4000-a200-000000000001', 'RLS test task');
 
 insert into public.time_entries (user_id, project_id, description, start_at, end_at)
 select u::uuid, 'e0000000-0000-4000-a200-000000000001', 'rls test', now() - interval '3 hours', now() - interval '2 hours'
@@ -141,6 +144,25 @@ select 'Analyst''s project hours are only their own',
                    where end_at is not null and project_id is not null), 0),
        'totals match their own entries';
 
+insert into rls_results (check_name, pass, detail)
+select 'Analyst cannot see budgets or levels',
+       (select count(*) from public.task_budgets) = 0
+       and (select count(*) from public.project_budgets) = 0
+       and (select count(*) from public.project_levels) = 0,
+       'budget tables return nothing';
+
+do $$
+begin
+  perform public.set_task_budget('e0000000-0000-4000-a300-000000000001', 'analyst', 5);
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot change a budget', false, 'change was allowed');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot change a budget', true, 'blocked: ' || sqlerrm);
+end $$;
+
+insert into rls_results (check_name, pass, detail)
+select 'Analyst gets nothing from the team report', count(*) = 0, count(*) || ' rows'
+from public.time_report();
+
 -- ---------------------------------------------------------------------
 -- As the Manager
 -- ---------------------------------------------------------------------
@@ -201,6 +223,37 @@ select 'Manager''s project hours include everyone''s time',
        > coalesce((select sum(extract(epoch from (end_at - start_at))) from public.time_entries
                    where end_at is not null and project_id is not null and user_id = auth.uid()), 0),
        'totals include other people';
+
+insert into rls_results (check_name, pass, detail)
+select 'Logging time saves each person''s level on the project',
+       count(*) = 5 and bool_or(user_id = 'e0000000-0000-4000-a000-000000000003' and level = 'analyst'),
+       count(*) || ' levels saved'
+from public.project_levels where project_id = 'e0000000-0000-4000-a200-000000000001';
+
+do $$
+declare n int;
+begin
+  perform public.set_task_budget('e0000000-0000-4000-a300-000000000001', 'analyst', 5);
+  select count(*) into n from public.task_budgets
+  where task_id = 'e0000000-0000-4000-a300-000000000001' and level = 'analyst' and hours = 5;
+  insert into rls_results (check_name, pass, detail) values ('Manager can set a budget', n = 1, n || ' budget row');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Manager can set a budget', false, 'blocked: ' || sqlerrm);
+end $$;
+
+insert into rls_results (check_name, pass, detail)
+select 'Manager sees the team report for a project', count(distinct user_id) >= 5, count(distinct user_id) || ' people'
+from public.time_report(only_project => 'e0000000-0000-4000-a200-000000000001');
+
+do $$
+begin
+  insert into public.project_budgets (project_id, warn_pct, over_pct)
+  values ('e0000000-0000-4000-a200-000000000001', 120, 100)
+  on conflict (project_id) do update set warn_pct = 120, over_pct = 100;
+  insert into rls_results (check_name, pass, detail) values ('Yellow line can''t be above the red line', false, 'saved 120 / 100');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Yellow line can''t be above the red line', true, 'blocked: ' || sqlerrm);
+end $$;
 
 -- ---------------------------------------------------------------------
 -- As the Director
@@ -280,7 +333,8 @@ exception when others then
 end $$;
 
 -- ---------------------------------------------------------------------
--- Remove everything the test created, then show results
+-- Remove everything the test created (the project takes its task,
+-- budgets and saved levels with it), then show results
 -- ---------------------------------------------------------------------
 reset role;
 delete from public.time_entries where user_id::text like 'e0000000-0000-4000-a000-%';
