@@ -301,19 +301,6 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
               {people.map((u, i) => (
                 <th key={u} className={`min-w-[72px] px-2 py-1.5 ${i === 0 ? "border-l border-light" : ""} ${personCls}`}>
                   <span className="block truncate">{nameOf(u).split(" ")[0]}</span>
-                  <select
-                    value={levelOf(u)}
-                    onChange={(e) => budget.setLevel(u, e.target.value as Level)}
-                    aria-label={`${nameOf(u)}'s level on this project`}
-                    title="Level on this project"
-                    className="mt-0.5 rounded border border-light bg-white px-1 text-[11px] font-normal text-charcoal print:hidden"
-                  >
-                    {LEVELS.map((l) => (
-                      <option key={l} value={l}>
-                        {LEVEL_LABELS[l]}
-                      </option>
-                    ))}
-                  </select>
                 </th>
               ))}
               <th className="print:hidden" />
@@ -439,8 +426,8 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
 
       <p className="mt-3 text-xs text-charcoal/70 print:hidden">
         Green: under 90% of budget · Amber: 90 to 100% · Red with a flag: over budget. Actual hours are all-time and
-        leave out running timers. Each person&apos;s level on this project was set when they first logged time on it;
-        change it with the dropdown under their name.
+        leave out running timers. Each person counts at the level they had when they first logged time on this
+        project.
       </p>
     </>
   );

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Bar } from "@/components/team/bits";
+import DateRangePicker from "@/components/DateRangePicker";
 import BudgetImport from "@/components/budget/BudgetImport";
 import { useTimeReport } from "@/components/team/useTimeReport";
 import type { Catalog } from "@/lib/useCatalog";
@@ -53,12 +54,11 @@ export default function ByProject({
   }, [report.rows, catalog.projectById, catalog.clientById, query]);
 
   const maxProject = Math.max(0, ...groups.flatMap((g) => g.projects.map((p) => p.seconds)));
-  const dateInput = "h-9 rounded-md border border-light bg-white px-2 text-sm focus:border-blue focus:outline-none";
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3 border-b border-light px-5 py-3">
-        <label className="flex h-9 w-64 items-center gap-2 rounded-md border border-light bg-white px-2.5 focus-within:border-blue">
+        <label className="flex h-9 w-64 items-center gap-2 rounded-full border border-light bg-white px-3 focus-within:border-blue">
           <Search size={15} className="text-medium" />
           <input
             value={query}
@@ -68,39 +68,15 @@ export default function ByProject({
             className="min-w-0 flex-1 bg-transparent text-sm focus:outline-none focus-visible:outline-none"
           />
         </label>
-        <div className="flex items-center gap-2 text-sm text-charcoal">
-          <input
-            type="date"
-            value={from ?? ""}
-            max={to ?? todayKey}
-            onChange={(e) => setFrom(e.target.value || null)}
-            aria-label="From"
-            className={dateInput}
-          />
-          <span className="text-charcoal/60">to</span>
-          <input
-            type="date"
-            value={to ?? ""}
-            min={from ?? undefined}
-            onChange={(e) => setTo(e.target.value || null)}
-            aria-label="To"
-            className={dateInput}
-          />
-          {from || to ? (
-            <button
-              type="button"
-              onClick={() => {
-                setFrom(null);
-                setTo(null);
-              }}
-              className="text-sm text-blue hover:underline"
-            >
-              Show all time
-            </button>
-          ) : (
-            <span className="text-xs text-charcoal/60">All time</span>
-          )}
-        </div>
+        <DateRangePicker
+          from={from}
+          to={to}
+          todayKey={todayKey}
+          onChange={(a, b) => {
+            setFrom(a);
+            setTo(b);
+          }}
+        />
         <div className="ml-auto">
           <BudgetImport catalog={catalog} onImported={(id) => router.push(`/team/projects/${id}`)} />
         </div>

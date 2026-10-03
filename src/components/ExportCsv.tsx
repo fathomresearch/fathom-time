@@ -9,7 +9,8 @@ import { fetchAll } from "@/lib/fetchAll";
 import { downloadFile, entriesToCsv } from "@/lib/csv";
 import { ENTRY_SELECT, toEntry } from "@/lib/data";
 import type { Catalog } from "@/lib/useCatalog";
-import { addDays, startOfDay } from "@/lib/time";
+import { addDays, dayKey, startOfDay } from "@/lib/time";
+import DateRangePicker from "@/components/DateRangePicker";
 
 /**
  * Export CSV with a From / To range, starting on the week being viewed.
@@ -31,8 +32,8 @@ export default function ExportCsv({
   note: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [from, setFrom] = useState(weekKey);
-  const [to, setTo] = useState(addDays(weekKey, 6));
+  const [from, setFrom] = useState<string | null>(weekKey);
+  const [to, setTo] = useState<string | null>(addDays(weekKey, 6));
   const [busy, setBusy] = useState(false);
 
   const openChange = (o: boolean) => {
@@ -45,27 +46,21 @@ export default function ExportCsv({
 
   const run = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!from || !to) return toast("Pick both dates.");
-    if (to < from) return toast("The end date is before the start date.");
     setBusy(true);
     const rows = await fetchAll((a, b) => {
-      let q = sb()
-        .from("time_entries")
-        .select(ENTRY_SELECT)
-        .not("end_at", "is", null)
-        .gte("start_at", startOfDay(from, tz).toISOString())
-        .lt("start_at", startOfDay(addDays(to, 1), tz).toISOString());
+      let q = sb().from("time_entries").select(ENTRY_SELECT).not("end_at", "is", null);
+      if (from) q = q.gte("start_at", startOfDay(from, tz).toISOString());
+      if (to) q = q.lt("start_at", startOfDay(addDays(to, 1), tz).toISOString());
       if (userId) q = q.eq("user_id", userId);
       return q.order("start_at").order("id").range(a, b);
     });
     setBusy(false);
     if (!rows) return toast("Couldn't export. Check your connection.");
     if (!rows.length) return toast("No time in that range.", "info");
-    downloadFile(`fathom-time_${from}_to_${to}.csv`, entriesToCsv(rows.map(toEntry), catalog, tz));
+    const range = from || to ? `${from ?? "start"}_to_${to ?? "now"}` : "all-time";
+    downloadFile(`fathom-time_${range}.csv`, entriesToCsv(rows.map(toEntry), catalog, tz));
     setOpen(false);
   };
-
-  const dateInput = "h-9 rounded-md border border-light px-2 text-sm focus:border-blue focus:outline-none";
 
   return (
     <Popover
@@ -83,16 +78,16 @@ export default function ExportCsv({
     >
       <form onSubmit={run} className="grid gap-3 p-4">
         <p className="font-display text-sm font-semibold text-navy">Export CSV</p>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="grid gap-1 text-xs text-charcoal/70">
-            From
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={dateInput} />
-          </label>
-          <label className="grid gap-1 text-xs text-charcoal/70">
-            To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={dateInput} />
-          </label>
-        </div>
+        <DateRangePicker
+          from={from}
+          to={to}
+          todayKey={dayKey(new Date(), tz)}
+          align="right"
+          onChange={(a, b) => {
+            setFrom(a);
+            setTo(b);
+          }}
+        />
         <p className="text-xs text-charcoal/70">
           {note} Running timers are left out.
         </p>

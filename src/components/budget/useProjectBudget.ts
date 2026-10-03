@@ -76,18 +76,7 @@ export function useProjectBudget(projectId: string) {
     return true;
   };
 
-  const setLevel = async (userId: string, level: Level) => {
-    setLevels((cur) => new Map(cur).set(userId, level));
-    const { error } = await sb()
-      .from("project_levels")
-      .upsert({ project_id: projectId, user_id: userId, level }, { onConflict: "project_id,user_id" });
-    if (error) {
-      toast("Couldn't change that level.");
-      load();
-    }
-  };
-
-  return { loaded, budgets, levels, rows, meta, reload: load, setCell, replaceAll, setLevel };
+  return { loaded, budgets, levels, rows, meta, reload: load, setCell, replaceAll };
 }
 
 /** Replace a project's budget without the page hook (import from elsewhere). */
