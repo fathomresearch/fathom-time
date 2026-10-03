@@ -132,7 +132,7 @@ export default function BudgetImport({
     }
   };
 
-  const field = "h-9 rounded-md border border-light bg-white px-2.5 text-sm focus:border-blue focus:outline-none";
+  const field = "h-9 rounded-md border border-light bg-white px-2.5 text-sm focus:border-navy focus:outline-none";
   const activeProjects = catalog.projects.filter((p) => !p.archived);
 
   return (
@@ -325,7 +325,7 @@ export default function BudgetImport({
                     d ? { ...d, tasks: [...d.tasks, { key: nextKey++, include: true, name: "", director: 0, manager: 0, analyst: 0 }] } : d
                   )
                 }
-                className="flex w-fit items-center gap-1 text-sm font-medium text-blue hover:underline"
+                className="flex w-fit items-center gap-1 text-sm font-semibold text-teal hover:underline"
               >
                 <Plus size={14} /> Add task
               </button>

@@ -15,6 +15,7 @@ export default function InlineInput({
   className = "",
   ariaLabel,
   selectOnFocus = true,
+  focusClass = "focus:border-blue",
 }: {
   value: string;
   onCommit: (next: string) => void | boolean | Promise<void | boolean>;
@@ -22,6 +23,8 @@ export default function InlineInput({
   className?: string;
   ariaLabel: string;
   selectOnFocus?: boolean;
+  /** Border color while editing (the budget page uses navy). */
+  focusClass?: string;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft ?? value;
@@ -52,7 +55,7 @@ export default function InlineInput({
           requestAnimationFrame(() => el.blur());
         }
       }}
-      className={`rounded-md border border-transparent bg-transparent px-2 py-1.5 hover:border-light focus:border-blue focus:bg-white focus:outline-none ${className}`}
+      className={`rounded-md border border-transparent bg-transparent px-2 py-1.5 hover:border-light ${focusClass} focus:bg-white focus:outline-none ${className}`}
     />
   );
 }

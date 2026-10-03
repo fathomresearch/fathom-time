@@ -210,6 +210,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
         <td key={l} className={`px-1 py-1 text-center ${i === 0 ? groupStart : ""} ${LEVEL_STYLE[l].faint}`}>
           {id && !total ? (
             <InlineInput
+              focusClass="focus:border-navy"
               ariaLabel={`${LEVEL_LABELS[l]} budget for ${name}`}
               value={hoursCell(b[l])}
               placeholder="–"
@@ -258,7 +259,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
     <>
       <Link
         href="/team?tab=project"
-        className="mb-3 inline-flex items-center gap-1 text-sm text-blue hover:underline print:hidden"
+        className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-teal hover:underline print:hidden"
       >
         <ChevronLeft size={16} /> By project
       </Link>
@@ -353,13 +354,6 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-charcoal/80">
-        {LEVELS.map((l) => (
-          <span key={l} className="inline-flex items-center gap-1.5">
-            <span className={`h-2.5 w-2.5 rounded-full ${LEVEL_STYLE[l].dot}`} />
-            {LEVEL_LABELS[l]}
-          </span>
-        ))}
-        <span className="text-light">|</span>
         <ThresholdLegend value={budget.thresholds} onChange={budget.setThresholds} />
       </div>
 
@@ -420,6 +414,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                     <div className="flex min-w-[220px] items-center gap-1.5">
                       {l.id ? (
                         <InlineInput
+                          focusClass="focus:border-navy"
                           ariaLabel="Task name"
                           value={l.name}
                           onCommit={(name) => {
@@ -476,7 +471,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                   <button
                     type="button"
                     onClick={() => setNewTask("")}
-                    className="flex items-center gap-1 text-sm font-medium text-blue hover:underline"
+                    className="flex items-center gap-1 text-sm font-semibold text-teal hover:underline"
                   >
                     <Plus size={14} /> Add task
                   </button>
@@ -496,7 +491,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                       onKeyDown={(e) => e.key === "Escape" && setNewTask(null)}
                       placeholder="Task name"
                       aria-label="New task name"
-                      className="h-8 w-72 rounded-md border border-light px-2.5 text-sm focus:border-blue focus:outline-none"
+                      className="h-8 w-72 rounded-md border border-light px-2.5 text-sm focus:border-navy focus:outline-none"
                     />
                     <button
                       type="submit"
@@ -543,6 +538,7 @@ function ThresholdLegend({ value, onChange }: { value: Thresholds; onChange: (t:
   };
   const pctInput = (key: "warn" | "over") => (
     <InlineInput
+      focusClass="focus:border-navy"
       ariaLabel={key === "warn" ? "Yellow from (% of budget)" : "Red above (% of budget)"}
       value={`${value[key]}`}
       onCommit={(t) => commit(key, t)}
