@@ -1,17 +1,17 @@
 import NoAccess from "@/components/NoAccess";
-import TeamOverview from "@/components/team/TeamOverview";
+import BudgetView from "@/components/budget/BudgetView";
 import { requireProfile } from "@/lib/auth";
 import { isLead } from "@/lib/types";
 
-export default async function TeamPage({ searchParams }: PageProps<"/team">) {
+export default async function ProjectBudgetPage({ params }: PageProps<"/team/projects/[projectId]">) {
   const profile = await requireProfile();
   if (!isLead(profile.role)) return <NoAccess />;
-  const { tab } = await searchParams;
+  const { projectId } = await params;
 
   return (
-    <TeamOverview
+    <BudgetView
+      projectId={projectId}
       viewer={{ id: profile.id, role: profile.role, timezone: profile.timezone }}
-      initialTab={tab === "project" || tab === "manage" ? tab : "person"}
     />
   );
 }

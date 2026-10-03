@@ -22,7 +22,7 @@ export default async function AppLayout({
           initials: initials(profile.name, profile.email),
         }}
       />
-      <main className="ml-60 min-h-full px-10 py-8">
+      <main className="ml-60 min-h-full px-10 py-8 print:m-0 print:p-0">
         <div className="mx-auto max-w-[1180px]">{children}</div>
       </main>
       <Toaster />

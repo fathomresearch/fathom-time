@@ -17,7 +17,7 @@ Internal Clockify replacement for Fathom Research & Strategy. Phases 1 to 4 were
 
 - Next.js 16 (App Router, Turbopack) + TypeScript + Tailwind v4 (CSS-based config in `src/app/globals.css`, no tailwind.config). Middleware is called **proxy** in Next 16: `src/proxy.ts`.
 - Supabase: Postgres, Auth (Google), Row-Level Security. `@supabase/ssr` for cookies.
-- `lucide-react` for icons. No other UI libraries. No date library: `src/lib/time.ts` does time zone math with `Intl`.
+- `lucide-react` for icons. No other UI libraries. SheetJS (`xlsx`, installed from cdn.sheetjs.com, loaded only when reading or writing a sheet) is approved for budget import/export. No date library: `src/lib/time.ts` does time zone math with `Intl`.
 - Hosting: **Netlify free**, not Vercel (Vercel Hobby forbids commercial use). Live at https://fathom-time.netlify.app, deployed automatically on every push to `main` of the private repo https://github.com/fathomresearch/fathom-time. Env vars are set in Netlify; `netlify.toml` sets Node 22 and `SECRETS_SCAN_OMIT_KEYS` (the public values that would otherwise fail Netlify's secret scan).
 - Supabase Site URL and Redirect URLs, and Google OAuth JavaScript origins, include both the Netlify URL and http://localhost:3000.
 - The user pushes to GitHub from their own Terminal (a personal access token is saved in the macOS keychain; it expires Oct 30, 2026).
@@ -32,6 +32,7 @@ Internal Clockify replacement for Fathom Research & Strategy. Phases 1 to 4 were
 - **Entries crossing midnight** count on the day they start; the end time shows "+1".
 - **Running timers are excluded** from totals, Timesheet and CSV. "Working now" shows them live.
 - **Roles (migration 003):** Director (was boss), Manager, Analyst (was employee). Everyone can add, edit, archive and delete projects, tasks and clients. Director and Manager both get Team Overview, see and edit everyone's time, CSV, budgets and imports. Only the Director moves people between Manager and Analyst; the Director role is fixed (can't be given, removed or deactivated in the app; change it only in SQL). Director can deactivate anyone else; a Manager only Analysts. Roles double as budget levels; a person's level on a project is saved when they first log time on it (promotions only affect new projects). `isLead(role)` in `src/lib/types.ts`; `is_lead()` / `is_director()` in SQL. `BOSS_EMAILS` still names the first-sign-in Director.
+- **Budgets (migration 004):** hours per task per level (`task_budgets`), replaced by import or edited cell by cell; `project_budgets` records who changed it last; `project_levels` stores each person's level per project (set by trigger on their first entry). Colors: under 90% green, 90–100% amber, over red + flag; no budget but time = over. Budget page `/team/projects/[projectId]` (leads only): budget by level, actual by level, actual by person; Excel export and print-to-PDF; "Show names" off by default. Template and import in `src/lib/budgetSheet.ts` (finds the Director/Manager/Analyst header row). By project tab is all-time with optional From/To; budget use always compares all-time hours.
 - **Tags:** everyone can create, rename and delete.
 - **No locking.** Past entries are always editable.
 - **Duration input follows Clockify:** `1`-`99` = minutes, `100`+ = last two digits are minutes (`200` = 2:00), decimals = hours, `1:30`, `2h`, `90m`. The **Timesheet uses `parseDurationInput(text, "hours")`** so a plain `8` means 8 hours.
@@ -63,6 +64,7 @@ DEFAULT_TIMEZONE=America/Chicago
 
 ## Code map
 
+- `src/lib/budget.ts` (levels, status colors), `src/lib/budgetSheet.ts` (xlsx read/write), `src/components/budget/` (BudgetView, BudgetImport, useProjectBudget), `src/components/team/useTimeReport.ts` (all-time report via `time_report()`).
 - `src/lib/time.ts`: zone math, day keys (`YYYY-MM-DD` in a zone), `weekStart` (Sunday), formatting, `parseTimeInput`, `parseDurationInput`.
 - `src/lib/data.ts`: row types, `ENTRY_SELECT`, `STANDARD_STAGES`, `PROJECT_COLORS` (10 colors).
 - `src/lib/useCatalog.ts`: projects, clients, tasks, tags, favorites, people, plus create/rename/delete helpers.

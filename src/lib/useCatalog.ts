@@ -100,7 +100,7 @@ export function useCatalog(viewerId: string) {
   );
 
   const createTask = useCallback(
-    async (projectId: string, name: string): Promise<Task | null> => {
+    async (projectId: string, name: string, sortOrder = 100): Promise<Task | null> => {
       const clean = name.trim();
       if (!clean) return null;
       const existing = tasks.find(
@@ -109,7 +109,7 @@ export function useCatalog(viewerId: string) {
       if (existing) return existing;
       const { data, error } = await sb()
         .from("tasks")
-        .insert({ project_id: projectId, name: clean, sort_order: 100 })
+        .insert({ project_id: projectId, name: clean, sort_order: sortOrder })
         .select("id,project_id,name,archived,sort_order")
         .single();
       if (error || !data) {

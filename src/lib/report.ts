@@ -42,15 +42,18 @@ export type ProjectNode = TreeNode & {
   tasks: (TreeNode & { people: { userId: string; seconds: number }[] })[];
 };
 
+/** One total for a project + task + person (from time_report()). */
+export type ReportItem = { project_id: string | null; task_id: string | null; user_id: string; seconds: number };
+
 /** Project → task (stage) → person, each level biggest first. */
-export function projectTree(entries: Entry[]): ProjectNode[] {
+export function projectTree(items: ReportItem[]): ProjectNode[] {
   const projects = new Map<string, Map<string, Map<string, number>>>();
-  for (const e of entries) {
+  for (const e of items) {
     const p = e.project_id ?? "";
     const t = e.task_id ?? "";
     const tasks = projects.get(p) ?? new Map<string, Map<string, number>>();
     const people = tasks.get(t) ?? new Map<string, number>();
-    people.set(e.user_id, (people.get(e.user_id) ?? 0) + entrySeconds(e));
+    people.set(e.user_id, (people.get(e.user_id) ?? 0) + e.seconds);
     tasks.set(t, people);
     projects.set(p, tasks);
   }

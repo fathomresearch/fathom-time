@@ -13,28 +13,27 @@ import type { Viewer } from "@/components/tracker/TimeTracker";
 import { useCatalog } from "@/lib/useCatalog";
 import { useNow } from "@/lib/useNow";
 import { displayName } from "@/lib/people";
-import { percent, projectTree, totals, weekByPerson } from "@/lib/report";
+import { percent, totals, weekByPerson } from "@/lib/report";
 import { dayKey, formatHoursShort, weekStart } from "@/lib/time";
 
-type Tab = "person" | "project" | "manage";
+export type Tab = "person" | "project" | "manage";
 const TABS: { id: Tab; label: string }[] = [
   { id: "person", label: "By person" },
   { id: "project", label: "By project" },
   { id: "manage", label: "Manage team" },
 ];
 
-export default function TeamOverview({ viewer }: { viewer: Viewer }) {
+export default function TeamOverview({ viewer, initialTab = "person" }: { viewer: Viewer; initialTab?: Tab }) {
   const tz = viewer.timezone;
   const now = useNow(60_000);
   const todayKey = dayKey(new Date(now), tz);
   const [weekKey, setWeekKey] = useState(() => weekStart(dayKey(new Date(), tz)));
-  const [tab, setTab] = useState<Tab>("person");
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   const catalog = useCatalog(viewer.id);
   const team = useTeamWeek(tz, weekKey);
 
   const byPerson = useMemo(() => weekByPerson(team.entries, weekKey, tz), [team.entries, weekKey, tz]);
-  const tree = useMemo(() => projectTree(team.entries), [team.entries]);
   const sum = useMemo(() => totals(team.entries), [team.entries]);
   const running = useMemo(() => new Map(team.running.map((e) => [e.user_id, e])), [team.running]);
   const nameOf = (id: string) => displayName(team.people.find((p) => p.id === id));
@@ -45,19 +44,22 @@ export default function TeamOverview({ viewer }: { viewer: Viewer }) {
     <>
       <PageHeader title="Team Overview">
         <ExportCsv catalog={catalog} tz={tz} weekKey={weekKey} note="Everyone's time." />
-        <WeekNav weekKey={weekKey} todayKey={todayKey} onChange={setWeekKey} />
+        {tab === "person" && <WeekNav weekKey={weekKey} todayKey={todayKey} onChange={setWeekKey} />}
       </PageHeader>
 
-      <div className="mb-6 grid grid-cols-4 gap-4">
-        <Tile label="Team hours" value={ready ? formatHoursShort(sum.total) : "…"} />
-        <Tile
-          label="Billable share"
-          value={ready ? percent(sum.billableShare) : "…"}
-          sub={ready ? `${formatHoursShort(sum.billable)} billable` : undefined}
-        />
-        <Tile label="People who logged time" value={ready ? String(loggers) : "…"} />
-        <Tile label="Working right now" value={ready ? String(running.size) : "…"} pulse={running.size > 0} />
-      </div>
+      {/* The tiles are for the week shown; By project has its own date range. */}
+      {tab === "person" && (
+        <div className="mb-6 grid grid-cols-4 gap-4">
+          <Tile label="Team hours" value={ready ? formatHoursShort(sum.total) : "…"} />
+          <Tile
+            label="Billable share"
+            value={ready ? percent(sum.billableShare) : "…"}
+            sub={ready ? `${formatHoursShort(sum.billable)} billable` : undefined}
+          />
+          <Tile label="People who logged time" value={ready ? String(loggers) : "…"} />
+          <Tile label="Working right now" value={ready ? String(running.size) : "…"} pulse={running.size > 0} />
+        </div>
+      )}
 
       <div className="mb-3 flex gap-1 border-b border-light" role="tablist">
         {TABS.map((t) => (
@@ -89,7 +91,7 @@ export default function TeamOverview({ viewer }: { viewer: Viewer }) {
             todayKey={todayKey}
           />
         ) : tab === "project" ? (
-          <ByProject tree={tree} catalog={catalog} nameOf={nameOf} />
+          <ByProject catalog={catalog} nameOf={nameOf} tz={tz} todayKey={todayKey} />
         ) : (
           <ManageTeam people={team.people} viewerId={viewer.id} viewerRole={viewer.role} onChanged={team.reload} />
         )}

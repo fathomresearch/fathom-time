@@ -51,7 +51,7 @@ export default function Sidebar({
     pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 flex w-60 flex-col bg-navy px-3 py-5">
+    <aside className="fixed inset-y-0 left-0 z-20 flex w-60 flex-col bg-navy px-3 py-5 print:hidden">
       <Link href="/tracker" className="mb-8 flex items-center gap-2.5 px-3">
         <Image
           src="/Fathom_Icon_Teal.png"
