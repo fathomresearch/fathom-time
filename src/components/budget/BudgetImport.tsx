@@ -63,7 +63,8 @@ export default function BudgetImport({
     return {
       ...base,
       sheet,
-      mode: target ? "existing" : "new",
+      // From a budget page: update that project. From Team Overview: create new.
+      mode: projectId ? "existing" : "new",
       projectId: target,
       projectName: parsed.projectName,
       clientId: client ? client.id : parsed.clientName ? "__new" : "",
@@ -151,6 +152,10 @@ export default function BudgetImport({
   const field = `${fieldBase} border-light bg-white focus:border-medium`;
   const fieldError = `${fieldBase} border-danger/40 bg-[#FFF6F6] focus:border-danger/60`;
   const activeProjects = catalog.projects.filter((p) => !p.archived);
+  const sameNameProject =
+    draft?.mode === "new" && draft.projectName.trim()
+      ? catalog.projects.find((p) => p.name.toLowerCase() === draft.projectName.trim().toLowerCase())
+      : undefined;
 
   return (
     <>
@@ -280,6 +285,12 @@ export default function BudgetImport({
                         onChange={(e) => patch({ projectName: e.target.value })}
                         className={field}
                       />
+                      {sameNameProject && (
+                        <span className="text-[11px] text-charcoal/70">
+                          A project called &ldquo;{sameNameProject.name}&rdquo; already exists. To change its budget,
+                          choose Update an existing project.
+                        </span>
+                      )}
                     </label>
                     <label className="grid gap-1 text-xs text-charcoal/70">
                       Client
