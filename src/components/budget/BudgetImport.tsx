@@ -1,11 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileUp, Plus, X } from "lucide-react";
+import { ChevronDown, Download, FileUp, Plus, X } from "lucide-react";
 import { toast } from "@/components/Toaster";
 import { saveProjectBudget, type BudgetRow } from "@/components/budget/useProjectBudget";
 import { LEVELS, LEVEL_LABELS, LEVEL_STYLE, type LevelHours } from "@/lib/budget";
-import { parseBudgetRows, readWorkbook } from "@/lib/budgetSheet";
+import { downloadTemplate, parseBudgetRows, readWorkbook } from "@/lib/budgetSheet";
 import type { Catalog } from "@/lib/useCatalog";
 
 type DraftTask = { key: number; include: boolean; name: string } & LevelHours;
@@ -24,7 +24,7 @@ type Draft = {
 let nextKey = 1;
 
 /**
- * "Import project/budget": read a sheet, let the person fix anything, then create or
+ * "Import Project/Budget": read a sheet, let the person fix anything, then create or
  * pick the project, create missing tasks, and replace its budget.
  * `projectId` attaches to that project by default (from its budget page).
  */
@@ -43,6 +43,7 @@ export default function BudgetImport({
   const workbook = useRef<Awaited<ReturnType<typeof readWorkbook>> | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   // Ticked tasks without a usable name, shown in light red after Import.
   const [nameErrors, setNameErrors] = useState<Map<number, string>>(new Map());
 
@@ -145,20 +146,59 @@ export default function BudgetImport({
     }
   };
 
-  const fieldBase = "h-9 rounded-md border px-2.5 text-sm focus:outline-none";
+  // text-charcoal: typed text reads like the task names, not the faded labels.
+  const fieldBase = "h-9 rounded-md border px-2.5 text-sm text-charcoal focus:outline-none";
   const field = `${fieldBase} border-light bg-white focus:border-medium`;
   const fieldError = `${fieldBase} border-danger/40 bg-[#FFF6F6] focus:border-danger/60`;
   const activeProjects = catalog.projects.filter((p) => !p.archived);
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        className={`flex h-9 items-center gap-1.5 rounded-md border border-light bg-white px-3 text-sm font-medium text-navy hover:bg-lightest ${className}`}
+      {/* Hover (or click / keyboard focus) shows: Import, Template. */}
+      <div
+        className={`group relative ${className}`}
+        onMouseLeave={() => setMenuOpen(false)}
+        onKeyDown={(e) => e.key === "Escape" && setMenuOpen(false)}
       >
-        <FileUp size={15} /> Import project/budget
-      </button>
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((o) => !o)}
+          className="flex h-9 items-center gap-1.5 rounded-md border border-light bg-white px-3 text-sm font-medium text-navy hover:bg-lightest"
+        >
+          <FileUp size={15} /> Import Project/Budget <ChevronDown size={14} className="text-charcoal/60" />
+        </button>
+        <div
+          role="menu"
+          className={`absolute right-0 top-full z-30 pt-1 ${menuOpen ? "block" : "hidden"} group-hover:block group-focus-within:block`}
+        >
+          <div className="w-44 rounded-lg border border-light bg-white p-1 shadow-xl">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                fileRef.current?.click();
+              }}
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-navy hover:bg-lightest"
+            >
+              <FileUp size={14} /> Import
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                downloadTemplate();
+              }}
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-navy hover:bg-lightest"
+            >
+              <Download size={14} /> Template
+            </button>
+          </div>
+        </div>
+      </div>
       <input
         ref={fileRef}
         type="file"
@@ -175,12 +215,12 @@ export default function BudgetImport({
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-6">
           <div
             role="dialog"
-            aria-label="Import project/budget"
+            aria-label="Import Project/Budget"
             className="w-full max-w-3xl rounded-lg bg-white shadow-xl"
           >
             <div className="flex items-center justify-between border-b border-light px-6 py-4">
               <div>
-                <h2 className="font-display text-base font-semibold text-navy">Import project/budget</h2>
+                <h2 className="font-display text-base font-semibold text-navy">Import Project/Budget</h2>
                 <p className="text-xs text-charcoal/70">
                   {draft.fileName}. Check everything below; nothing is saved until you click Import.
                 </p>
