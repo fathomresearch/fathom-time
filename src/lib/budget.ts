@@ -25,7 +25,7 @@ export const sumLevels = (h: LevelHours) => h.director + h.manager + h.analyst;
 export type Thresholds = { warn: number; over: number };
 export const DEFAULT_THRESHOLDS: Thresholds = { warn: 90, over: 100 };
 
-/** Under the warn line, between warn and over, or over. No budget but time logged counts as over. */
+/** Under the warn line, between warn and over, or over. No budget: "none" (nothing to compare with). */
 export type BudgetStatus = "none" | "under" | "near" | "over";
 
 export function budgetStatus(
@@ -33,7 +33,7 @@ export function budgetStatus(
   budgetHours: number,
   t: Thresholds = DEFAULT_THRESHOLDS
 ): BudgetStatus {
-  if (budgetHours <= 0) return actualHours > 0.005 ? "over" : "none";
+  if (budgetHours <= 0) return "none";
   const pct = (actualHours / budgetHours) * 100;
   if (pct > t.over + 0.01) return "over";
   return pct >= t.warn ? "near" : "under";

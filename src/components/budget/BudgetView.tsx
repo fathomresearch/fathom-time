@@ -236,10 +236,13 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
           key={l}
           className={`tabular px-2 py-2 text-center ${i === 0 ? groupStart : ""} ${l === "total" ? "font-semibold" : ""}`}
         >
-          {status !== "none" && (
+          {status !== "none" ? (
             <span className={`inline-block min-w-[46px] rounded-full px-2 py-0.5 ${STATUS_CLASS[status]}`}>
               {hoursCell(act) || "0.0"}
             </span>
+          ) : (
+            // No budget for this cell: show the hours plainly, without a color.
+            <span className="inline-block min-w-[46px] px-2 py-0.5 text-charcoal">{hoursCell(act)}</span>
           )}
         </td>
       );
