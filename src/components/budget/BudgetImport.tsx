@@ -46,6 +46,32 @@ export default function BudgetImport({
   const [menuOpen, setMenuOpen] = useState(false);
   // Ticked tasks without a usable name, shown in light red after Import.
   const [nameErrors, setNameErrors] = useState<Map<number, string>>(new Map());
+  // Empty-field warnings show once Import has been clicked; duplicate names show right away.
+  const [tried, setTried] = useState(false);
+
+  /** Problems with the project and client boxes (names must be new and not empty). */
+  const headerErrors = (d: Draft, afterTry: boolean) => {
+    const name = d.projectName.trim().toLowerCase();
+    const clientName = d.newClientName.trim().toLowerCase();
+    const takenProject = catalog.projects.find((p) => p.name.trim().toLowerCase() === name);
+    const takenClient = catalog.clients.find((c) => c.name.trim().toLowerCase() === clientName);
+    let project: string | null = null;
+    let client: string | null = null;
+    let target: string | null = null;
+    if (d.mode === "new") {
+      if (name && takenProject)
+        project = `A project called "${takenProject.name}" already exists. Use a different name, or choose Update an existing project.`;
+      else if (!name && afterTry) project = "Give the project a name.";
+      if (d.clientId === "__new") {
+        if (clientName && takenClient)
+          client = `A client called "${takenClient.name}" already exists. Pick it from the Client list instead.`;
+        else if (!clientName && afterTry) client = "Type the new client's name.";
+      }
+    } else if (!d.projectId && afterTry) {
+      target = "Pick the project to update.";
+    }
+    return { project, client, target };
+  };
 
   const fromSheet = (
     sheet: string,
@@ -87,7 +113,11 @@ export default function BudgetImport({
     const base = { fileName: file.name, sheetNames };
     for (const sheet of sheetNames) {
       const d = fromSheet(sheet, base);
-      if (d && d.tasks.length) return setDraft(d);
+      if (d && d.tasks.length) {
+        setTried(false);
+        setNameErrors(new Map());
+        return setDraft(d);
+      }
     }
     toast("No budget table found. It needs a row with Director, Manager and Analyst headings.");
   };
@@ -98,6 +128,8 @@ export default function BudgetImport({
 
   const apply = async () => {
     if (!draft) return;
+    setTried(true);
+    const header = headerErrors(draft, true);
     const included = draft.tasks.filter((t) => t.include);
     if (!included.length) return toast("Tick at least one task.");
     const errors = new Map<number, string>();
@@ -107,13 +139,10 @@ export default function BudgetImport({
       else if (name === "no task") errors.set(t.key, '"No task" can\'t be used as a name.');
     }
     setNameErrors(errors);
-    if (errors.size) return toast("Every ticked task needs a name.");
+    if (errors.size || header.project || header.client || header.target)
+      return toast("Fix the boxes marked in red first.");
     const names = included.map((t) => t.name.trim().toLowerCase());
     if (new Set(names).size !== names.length) return toast("Two tasks have the same name. Rename or remove one.");
-    if (draft.mode === "new" && !draft.projectName.trim()) return toast("Give the project a name.");
-    if (draft.mode === "existing" && !draft.projectId) return toast("Pick the project to update.");
-    if (draft.mode === "new" && draft.clientId === "__new" && !draft.newClientName.trim())
-      return toast("Type the new client's name.");
 
     setSaving(true);
     try {
@@ -152,10 +181,8 @@ export default function BudgetImport({
   const field = `${fieldBase} border-light bg-white focus:border-medium`;
   const fieldError = `${fieldBase} border-danger/40 bg-[#FFF6F6] focus:border-danger/60`;
   const activeProjects = catalog.projects.filter((p) => !p.archived);
-  const sameNameProject =
-    draft?.mode === "new" && draft.projectName.trim()
-      ? catalog.projects.find((p) => p.name.toLowerCase() === draft.projectName.trim().toLowerCase())
-      : undefined;
+  const errs = draft ? headerErrors(draft, tried) : { project: null, client: null, target: null };
+  const note = (msg: string | null) => (msg ? <span className="text-[11px] text-danger">{msg}</span> : null);
 
   return (
     <>
@@ -283,14 +310,10 @@ export default function BudgetImport({
                       <input
                         value={draft.projectName}
                         onChange={(e) => patch({ projectName: e.target.value })}
-                        className={field}
+                        aria-invalid={!!errs.project}
+                        className={errs.project ? fieldError : field}
                       />
-                      {sameNameProject && (
-                        <span className="text-[11px] text-charcoal/70">
-                          A project called &ldquo;{sameNameProject.name}&rdquo; already exists. To change its budget,
-                          choose Update an existing project.
-                        </span>
-                      )}
+                      {note(errs.project)}
                     </label>
                     <label className="grid gap-1 text-xs text-charcoal/70">
                       Client
@@ -316,8 +339,10 @@ export default function BudgetImport({
                         <input
                           value={draft.newClientName}
                           onChange={(e) => patch({ newClientName: e.target.value })}
-                          className={field}
+                          aria-invalid={!!errs.client}
+                          className={errs.client ? fieldError : field}
                         />
+                        {note(errs.client)}
                       </label>
                     )}
                   </div>
@@ -327,7 +352,8 @@ export default function BudgetImport({
                     <select
                       value={draft.projectId}
                       onChange={(e) => patch({ projectId: e.target.value })}
-                      className={field}
+                      aria-invalid={!!errs.target}
+                      className={errs.target ? fieldError : field}
                     >
                       <option value="">Choose a project…</option>
                       {activeProjects.map((p) => (
@@ -336,6 +362,7 @@ export default function BudgetImport({
                         </option>
                       ))}
                     </select>
+                    {note(errs.target)}
                     <span className="text-charcoal/60">
                       Tasks are matched by name and missing ones are created. This replaces the project&apos;s current
                       budget.
