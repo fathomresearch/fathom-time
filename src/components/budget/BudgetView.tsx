@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Download, Flag, Plus, Printer, X } from "lucide-react";
+import { ChevronLeft, Download, Flag, Plus, X } from "lucide-react";
 import Popover from "@/components/tracker/Popover";
 import InlineInput from "@/components/tracker/InlineInput";
 import { toast } from "@/components/Toaster";
@@ -316,16 +316,6 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                 className="flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-navy hover:bg-lightest"
               >
                 <Download size={15} /> Excel (.xlsx)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setExportOpen(false);
-                  setTimeout(() => window.print(), 50);
-                }}
-                className="flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-navy hover:bg-lightest"
-              >
-                <Printer size={15} /> PDF (print, then Save as PDF)
               </button>
             </div>
           </Popover>
