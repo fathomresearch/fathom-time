@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Upload } from "lucide-react";
 import BudgetImport from "@/components/budget/BudgetImport";
 import PageHeader from "@/components/PageHeader";
 import WeekNav from "@/components/WeekNav";
@@ -49,6 +51,12 @@ export default function TeamOverview({ viewer, initialTab = "person" }: { viewer
         {tab === "project" && (
           <BudgetImport catalog={catalog} onImported={(id) => router.push(`/team/projects/${id}`)} />
         )}
+        <Link
+          href="/team/import"
+          className="flex h-9 items-center gap-1.5 rounded-md border border-light bg-white px-3 text-sm font-medium text-navy hover:bg-lightest"
+        >
+          <Upload size={15} /> Import time
+        </Link>
         <ExportCsv catalog={catalog} tz={tz} weekKey={weekKey} note="Everyone's time." />
         {tab === "person" && <WeekNav weekKey={weekKey} todayKey={todayKey} onChange={setWeekKey} />}
       </PageHeader>
@@ -99,7 +107,13 @@ export default function TeamOverview({ viewer, initialTab = "person" }: { viewer
         ) : tab === "project" ? (
           <ByProject catalog={catalog} nameOf={nameOf} tz={tz} todayKey={todayKey} />
         ) : (
-          <ManageTeam people={team.people} viewerId={viewer.id} viewerRole={viewer.role} onChanged={team.reload} />
+          <ManageTeam
+            people={team.people}
+            viewerId={viewer.id}
+            viewerRole={viewer.role}
+            tz={tz}
+            onChanged={team.reload}
+          />
         )}
       </div>
     </>

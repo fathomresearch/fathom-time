@@ -13,5 +13,9 @@ export type Profile = {
   active: boolean;
   timezone: string;
   role_initialized: boolean;
+  /** false: a former member created by an import (can't sign in). */
+  has_login: boolean;
+  /** Set when a former member was linked to this real account's id. */
+  merged_into: string | null;
   created_at: string;
 };

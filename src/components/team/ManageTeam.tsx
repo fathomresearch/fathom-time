@@ -4,6 +4,7 @@ import { useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { toast } from "@/components/Toaster";
 import { Avatar } from "@/components/team/bits";
+import FormerMembers from "@/components/team/FormerMembers";
 import type { TeamPerson } from "@/components/team/useTeamWeek";
 import { setActive, setRole } from "@/app/(app)/team/actions";
 import { displayName } from "@/lib/people";
@@ -18,19 +19,22 @@ export default function ManageTeam({
   people,
   viewerId,
   viewerRole,
+  tz,
   onChanged,
 }: {
   people: TeamPerson[];
   viewerId: string;
   viewerRole: Role;
+  tz: string;
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState<TeamPerson | null>(null);
 
-  const sorted = [...people].sort(
-    (a, b) => Number(b.active) - Number(a.active) || displayName(a).localeCompare(displayName(b))
-  );
+  // Former members (no sign-in) and linked records are listed separately below.
+  const sorted = people
+    .filter((p) => p.has_login !== false && !p.merged_into)
+    .sort((a, b) => Number(b.active) - Number(a.active) || displayName(a).localeCompare(displayName(b)));
 
   const run = async (id: string, action: () => Promise<{ ok: boolean; message: string }>) => {
     setBusy(id);
@@ -61,8 +65,7 @@ export default function ManageTeam({
           {sorted.map((p) => {
             const self = p.id === viewerId;
             const canSetRole = viewerRole === "director" && !self && p.role !== "director";
-            const canSetAccess =
-              !self && p.role !== "director" && (viewerRole === "director" || p.role === "analyst");
+            const canSetAccess = !self && p.role !== "director" && (viewerRole === "director" || p.role === "analyst");
             return (
               <tr key={p.id} className={`border-b border-light last:border-0 ${p.active ? "" : "text-charcoal/60"}`}>
                 <td className="px-4 py-2.5">
@@ -119,6 +122,8 @@ export default function ManageTeam({
           })}
         </tbody>
       </table>
+
+      <FormerMembers people={people} viewerRole={viewerRole} tz={tz} onChanged={onChanged} />
 
       <ConfirmDialog
         open={!!deactivating}

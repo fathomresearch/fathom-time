@@ -19,6 +19,8 @@ export type NewProjectInput = {
   clientId: string | null;
   newClientName: string | null;
   addStages: boolean;
+  /** Optional; otherwise the first color no active project uses. */
+  color?: string;
 };
 
 /**
@@ -255,6 +257,7 @@ export function useCatalog(viewerId: string) {
 
       const used = new Set(projects.filter((p) => !p.archived).map((p) => p.color));
       const color =
+        input.color ??
         PROJECT_COLORS.find((c) => !used.has(c)) ??
         PROJECT_COLORS[projects.length % PROJECT_COLORS.length];
 

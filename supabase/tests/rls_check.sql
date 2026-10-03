@@ -1,5 +1,5 @@
 -- =====================================================================
--- Fathom Time: security check (run after migrations 003 to 006)
+-- Fathom Time: security check (run after migrations 003 to 007)
 -- Creates temporary test people (IDs start with e0000000), signs in as
 -- each behind the scenes, and tries things they should and should not be
 -- able to do. Removes everything it created at the end; real data is
@@ -163,6 +163,21 @@ insert into rls_results (check_name, pass, detail)
 select 'Analyst gets nothing from the team report', count(*) = 0, count(*) || ' rows'
 from public.time_report();
 
+insert into rls_results (check_name, pass, detail)
+select 'Analyst cannot see import data',
+       (select count(*) from public.person_aliases) = 0
+       and (select count(*) from public.import_mappings) = 0
+       and (select count(*) from public.person_links) = 0,
+       'import tables return nothing';
+
+do $$
+begin
+  perform public.link_person('e0000000-0000-4000-a000-000000000005', 'e0000000-0000-4000-a000-000000000003', false);
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot link people', false, 'link was allowed');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot link people', true, 'blocked: ' || sqlerrm);
+end $$;
+
 -- ---------------------------------------------------------------------
 -- As the Manager
 -- ---------------------------------------------------------------------
@@ -253,6 +268,14 @@ begin
   insert into rls_results (check_name, pass, detail) values ('Yellow line can''t be above the red line', false, 'saved 120 / 100');
 exception when others then
   insert into rls_results (check_name, pass, detail) values ('Yellow line can''t be above the red line', true, 'blocked: ' || sqlerrm);
+end $$;
+
+do $$
+begin
+  perform public.link_person('e0000000-0000-4000-a000-000000000005', 'e0000000-0000-4000-a000-000000000003', false);
+  insert into rls_results (check_name, pass, detail) values ('Manager cannot link people (Director only)', false, 'link was allowed');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Manager cannot link people (Director only)', true, 'blocked: ' || sqlerrm);
 end $$;
 
 do $$

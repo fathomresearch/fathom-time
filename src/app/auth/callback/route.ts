@@ -93,5 +93,22 @@ export async function GET(request: NextRequest) {
       .eq("id", user.id);
   }
 
+  // Imported history under this exact email (a former member without
+  // sign-in) moves to this account. Less certain matches are linked by the
+  // Director in Manage team. Errors here never block signing in.
+  const { data: matches } = await admin
+    .from("person_aliases")
+    .select("user_id, profiles!inner(has_login, merged_into)")
+    .eq("kind", "email")
+    .eq("alias", email);
+  const former = new Set(
+    ((matches ?? []) as unknown as { user_id: string; profiles: { has_login: boolean; merged_into: string | null } }[])
+      .filter((m) => m.user_id !== user.id && !m.profiles.has_login && !m.profiles.merged_into)
+      .map((m) => m.user_id)
+  );
+  for (const id of former) {
+    await admin.rpc("link_person", { p_from: id, p_to: user.id, p_auto: true });
+  }
+
   return NextResponse.redirect(new URL("/tracker", url.origin));
 }

@@ -10,7 +10,7 @@ import type { Profile } from "@/lib/types";
 
 const REFRESH_MS = 20_000;
 
-export type TeamPerson = Pick<Profile, "id" | "name" | "email" | "role" | "active">;
+export type TeamPerson = Pick<Profile, "id" | "name" | "email" | "role" | "active" | "has_login" | "merged_into">;
 
 /**
  * Everyone's stopped entries for one week, everyone's running timers, and
@@ -27,7 +27,7 @@ export function useTeamWeek(tz: string, weekKey: string) {
     const seq = ++loadSeq.current;
     const db = sb();
     const [p, list, run] = await Promise.all([
-      db.from("profiles").select("id,name,email,role,active").order("name"),
+      db.from("profiles").select("id,name,email,role,active,has_login,merged_into").order("name"),
       fetchAll((from, to) =>
         db
           .from("time_entries")

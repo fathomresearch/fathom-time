@@ -93,7 +93,11 @@ export default function ByPerson({
                       className="block truncate font-medium text-navy hover:underline"
                     >
                       {displayName(p)}
-                      {!p.active && <span className="ml-1.5 text-xs font-normal text-charcoal/60">(deactivated)</span>}
+                      {!p.active && (
+                        <span className="ml-1.5 text-xs font-normal text-charcoal/60">
+                          {p.has_login ? "(deactivated)" : "(former member)"}
+                        </span>
+                      )}
                     </Link>
                     <div className="text-xs">
                       <LiveStatus running={run} catalog={catalog} />
