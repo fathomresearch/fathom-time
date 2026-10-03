@@ -21,6 +21,16 @@ export type NewProjectInput = {
   addStages: boolean;
 };
 
+/**
+ * Why a delete failed, in plain words. 23503: time entries still point at it.
+ * P0001: a database rule said no (e.g. it has a budget); its text is written for people.
+ */
+function deleteMessage(error: { code?: string; message: string }, what: "project" | "task") {
+  if (error.code === "23503") return `This ${what} has time. Archive it instead.`;
+  if (error.code === "P0001") return error.message;
+  return `Couldn't delete that ${what}.`;
+}
+
 export type ProjectPatch = Partial<
   Pick<Project, "name" | "color" | "client_id" | "type" | "billable_default" | "archived">
 >;
@@ -303,7 +313,7 @@ export function useCatalog(viewerId: string) {
       const { error } = await sb().from("projects").delete().eq("id", id);
       if (error) {
         // 23503: time entries still point at it.
-        toast(error.code === "23503" ? "This project has time. Archive it instead." : "Couldn't delete that project.");
+        toast(deleteMessage(error, "project"));
         return false;
       }
       setProjects((cur) => cur.filter((p) => p.id !== id));
@@ -344,7 +354,7 @@ export function useCatalog(viewerId: string) {
     async (id: string): Promise<boolean> => {
       const { error } = await sb().from("tasks").delete().eq("id", id);
       if (error) {
-        toast(error.code === "23503" ? "This task has time. Archive it instead." : "Couldn't delete that task.");
+        toast(deleteMessage(error, "task"));
         return false;
       }
       setTasks((cur) => cur.filter((t) => t.id !== id));
