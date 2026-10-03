@@ -132,7 +132,7 @@ export default function BudgetImport({
     }
   };
 
-  const field = "h-9 rounded-md border border-light bg-white px-2.5 text-sm focus:border-navy focus:outline-none";
+  const field = "h-9 rounded-md border border-light bg-white px-2.5 text-sm focus:border-medium focus:outline-none";
   const activeProjects = catalog.projects.filter((p) => !p.archived);
 
   return (

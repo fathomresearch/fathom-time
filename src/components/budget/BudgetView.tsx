@@ -210,12 +210,12 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
         <td key={l} className={`px-1 py-1 text-center ${i === 0 ? groupStart : ""} ${LEVEL_STYLE[l].faint}`}>
           {id && !total ? (
             <InlineInput
-              focusClass="focus:border-navy"
+              focusClass="focus:border-medium"
               ariaLabel={`${LEVEL_LABELS[l]} budget for ${name}`}
               value={hoursCell(b[l])}
               placeholder="–"
               onCommit={(text) => setBudget(id, l, text)}
-              className="tabular w-full text-center text-blue"
+              className="tabular w-full text-center text-blue placeholder:text-medium"
             />
           ) : (
             <span className={`tabular block py-1 ${total ? "font-semibold text-navy" : "text-charcoal"}`}>
@@ -259,7 +259,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
     <>
       <Link
         href="/team?tab=project"
-        className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-teal hover:underline print:hidden"
+        className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-navy hover:underline print:hidden"
       >
         <ChevronLeft size={16} /> By project
       </Link>
@@ -414,7 +414,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                     <div className="flex min-w-[220px] items-center gap-1.5">
                       {l.id ? (
                         <InlineInput
-                          focusClass="focus:border-navy"
+                          focusClass="focus:border-medium"
                           ariaLabel="Task name"
                           value={l.name}
                           onCommit={(name) => {
@@ -491,7 +491,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                       onKeyDown={(e) => e.key === "Escape" && setNewTask(null)}
                       placeholder="Task name"
                       aria-label="New task name"
-                      className="h-8 w-72 rounded-md border border-light px-2.5 text-sm focus:border-navy focus:outline-none"
+                      className="h-8 w-72 rounded-md border border-light px-2.5 text-sm focus:border-medium focus:outline-none"
                     />
                     <button
                       type="submit"
@@ -538,7 +538,7 @@ function ThresholdLegend({ value, onChange }: { value: Thresholds; onChange: (t:
   };
   const pctInput = (key: "warn" | "over") => (
     <InlineInput
-      focusClass="focus:border-navy"
+      focusClass="focus:border-medium"
       ariaLabel={key === "warn" ? "Yellow from (% of budget)" : "Red above (% of budget)"}
       value={`${value[key]}`}
       onCommit={(t) => commit(key, t)}
