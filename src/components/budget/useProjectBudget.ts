@@ -84,7 +84,7 @@ export function useProjectBudget(projectId: string) {
     return true;
   };
 
-  /** Amber and red lines for this project, in % of budget. */
+  /** Yellow and red lines for this project, in % of budget. */
   const setThresholds = async (t: Thresholds) => {
     setThresholdsState(t);
     const { error } = await sb()

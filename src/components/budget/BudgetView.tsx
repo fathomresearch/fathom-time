@@ -214,7 +214,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
               value={hoursCell(b[l])}
               placeholder="–"
               onCommit={(text) => setBudget(id, l, text)}
-              className="tabular w-full bg-white text-center text-navy ring-1 ring-inset ring-light focus:ring-0"
+              className="tabular w-full text-center text-blue"
             />
           ) : (
             <span className={`tabular block py-1 ${total ? "font-semibold text-navy" : "text-charcoal"}`}>
@@ -426,7 +426,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                             if (!name.trim()) return toast("A task needs a name.");
                             catalog.updateTask(l.id!, { name });
                           }}
-                          className={`min-w-0 flex-1 bg-white ring-1 ring-inset ring-light focus:ring-0 ${l.archived ? "text-charcoal/60 line-through" : "text-navy"}`}
+                          className={`min-w-0 flex-1 ${l.archived ? "text-charcoal/60 line-through" : "text-navy"}`}
                         />
                       ) : (
                         <span
@@ -538,15 +538,15 @@ function ThresholdLegend({ value, onChange }: { value: Thresholds; onChange: (t:
     const n = Math.round(Number(text.replace("%", "").trim()) * 10) / 10;
     if (!Number.isFinite(n) || n <= 0 || n > 1000) return toast("Type a percentage, like 90.");
     const next = { ...value, [key]: n };
-    if (next.warn > next.over) return toast("The amber line can't be above the red line.");
+    if (next.warn > next.over) return toast("The yellow line can't be above the red line.");
     onChange(next);
   };
   const pctInput = (key: "warn" | "over") => (
     <InlineInput
-      ariaLabel={key === "warn" ? "Amber from (% of budget)" : "Red above (% of budget)"}
+      ariaLabel={key === "warn" ? "Yellow from (% of budget)" : "Red above (% of budget)"}
       value={`${value[key]}`}
       onCommit={(t) => commit(key, t)}
-      className="tabular w-12 bg-white px-1 py-0 text-center text-xs ring-1 ring-inset ring-light focus:ring-0"
+      className="tabular w-12 bg-white px-1 py-0 text-center text-xs ring-1 ring-inset ring-light/50 focus:ring-0"
     />
   );
   return (
@@ -557,7 +557,7 @@ function ThresholdLegend({ value, onChange }: { value: Thresholds; onChange: (t:
       </span>
       <span className={`rounded-full px-2 py-px ${STATUS_CLASS.over}`}>Over {value.over}%</span>
       <span className="ml-2 inline-flex items-center gap-1 text-charcoal/70 print:hidden">
-        Amber from {pctInput("warn")}% · red above {pctInput("over")}%
+        Yellow from {pctInput("warn")}% · red above {pctInput("over")}%
       </span>
     </span>
   );

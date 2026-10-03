@@ -21,7 +21,7 @@ export type LevelHours = Record<Level, number>;
 export const emptyLevels = (): LevelHours => ({ director: 0, manager: 0, analyst: 0 });
 export const sumLevels = (h: LevelHours) => h.director + h.manager + h.analyst;
 
-/** Amber from `warn`% of budget, red above `over`%. Set per project; these are the defaults. */
+/** Yellow from `warn`% of budget, red above `over`%. Set per project; these are the defaults. */
 export type Thresholds = { warn: number; over: number };
 export const DEFAULT_THRESHOLDS: Thresholds = { warn: 90, over: 100 };
 
