@@ -24,7 +24,7 @@ type Draft = {
 let nextKey = 1;
 
 /**
- * "Import budget": read a sheet, let the person fix anything, then create or
+ * "Import project/budget": read a sheet, let the person fix anything, then create or
  * pick the project, create missing tasks, and replace its budget.
  * `projectId` attaches to that project by default (from its budget page).
  */
@@ -43,8 +43,13 @@ export default function BudgetImport({
   const workbook = useRef<Awaited<ReturnType<typeof readWorkbook>> | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  // Ticked tasks without a usable name, shown in light red after Import.
+  const [nameErrors, setNameErrors] = useState<Map<number, string>>(new Map());
 
-  const fromSheet = (sheet: string, base: Omit<Draft, "sheet" | "tasks" | "projectName" | "clientId" | "newClientName" | "mode" | "projectId">) => {
+  const fromSheet = (
+    sheet: string,
+    base: Omit<Draft, "sheet" | "tasks" | "projectName" | "clientId" | "newClientName" | "mode" | "projectId">
+  ) => {
     const parsed = parseBudgetRows(workbook.current!.rowsOf(sheet));
     if (!parsed) return null;
     const sameName = catalog.projects.find(
@@ -91,12 +96,20 @@ export default function BudgetImport({
 
   const apply = async () => {
     if (!draft) return;
-    const included = draft.tasks.filter((t) => t.include && t.name.trim());
-    if (!included.length) return toast("Include at least one task.");
+    const included = draft.tasks.filter((t) => t.include);
+    if (!included.length) return toast("Tick at least one task.");
+    const errors = new Map<number, string>();
+    for (const t of included) {
+      const name = t.name.trim().toLowerCase();
+      if (!name) errors.set(t.key, "Give this task a name.");
+      else if (name === "no task") errors.set(t.key, '"No task" can\'t be used as a name.');
+    }
+    setNameErrors(errors);
+    if (errors.size) return toast("Every ticked task needs a name.");
     const names = included.map((t) => t.name.trim().toLowerCase());
     if (new Set(names).size !== names.length) return toast("Two tasks have the same name. Rename or remove one.");
     if (draft.mode === "new" && !draft.projectName.trim()) return toast("Give the project a name.");
-    if (draft.mode === "existing" && !draft.projectId) return toast("Pick the project to attach this budget to.");
+    if (draft.mode === "existing" && !draft.projectId) return toast("Pick the project to update.");
     if (draft.mode === "new" && draft.clientId === "__new" && !draft.newClientName.trim())
       return toast("Type the new client's name.");
 
@@ -111,7 +124,7 @@ export default function BudgetImport({
               newClientName: draft.clientId === "__new" ? draft.newClientName : null,
               addStages: false,
             })
-          : catalog.projectById.get(draft.projectId) ?? null;
+          : (catalog.projectById.get(draft.projectId) ?? null);
       if (!project) return;
 
       const existing = catalog.tasks.filter((t) => t.project_id === project.id);
@@ -132,7 +145,9 @@ export default function BudgetImport({
     }
   };
 
-  const field = "h-9 rounded-md border border-light bg-white px-2.5 text-sm focus:border-medium focus:outline-none";
+  const fieldBase = "h-9 rounded-md border px-2.5 text-sm focus:outline-none";
+  const field = `${fieldBase} border-light bg-white focus:border-medium`;
+  const fieldError = `${fieldBase} border-danger/40 bg-[#FFF6F6] focus:border-danger/60`;
   const activeProjects = catalog.projects.filter((p) => !p.archived);
 
   return (
@@ -142,7 +157,7 @@ export default function BudgetImport({
         onClick={() => fileRef.current?.click()}
         className={`flex h-9 items-center gap-1.5 rounded-md border border-light bg-white px-3 text-sm font-medium text-navy hover:bg-lightest ${className}`}
       >
-        <FileUp size={15} /> Import budget
+        <FileUp size={15} /> Import project/budget
       </button>
       <input
         ref={fileRef}
@@ -158,15 +173,24 @@ export default function BudgetImport({
 
       {draft && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-6">
-          <div role="dialog" aria-label="Import budget" className="w-full max-w-3xl rounded-lg bg-white shadow-xl">
+          <div
+            role="dialog"
+            aria-label="Import project/budget"
+            className="w-full max-w-3xl rounded-lg bg-white shadow-xl"
+          >
             <div className="flex items-center justify-between border-b border-light px-6 py-4">
               <div>
-                <h2 className="font-display text-base font-semibold text-navy">Import budget</h2>
+                <h2 className="font-display text-base font-semibold text-navy">Import project/budget</h2>
                 <p className="text-xs text-charcoal/70">
                   {draft.fileName}. Check everything below; nothing is saved until you click Import.
                 </p>
               </div>
-              <button type="button" onClick={() => setDraft(null)} aria-label="Close" className="rounded p-1.5 text-charcoal/60 hover:bg-lightest">
+              <button
+                type="button"
+                onClick={() => setDraft(null)}
+                aria-label="Close"
+                className="rounded p-1.5 text-charcoal/60 hover:bg-lightest"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -202,7 +226,7 @@ export default function BudgetImport({
                       onClick={() => patch({ mode: m })}
                       className={`flex-1 rounded px-3 py-1.5 font-medium ${draft.mode === m ? "bg-navy text-white" : "text-charcoal hover:bg-lightest"}`}
                     >
-                      {m === "new" ? "Create as a new project" : "Attach to an existing project"}
+                      {m === "new" ? "Create as a new project" : "Update an existing project"}
                     </button>
                   ))}
                 </div>
@@ -211,11 +235,19 @@ export default function BudgetImport({
                   <div className="grid grid-cols-2 gap-3">
                     <label className="grid gap-1 text-xs text-charcoal/70">
                       Project name
-                      <input value={draft.projectName} onChange={(e) => patch({ projectName: e.target.value })} className={field} />
+                      <input
+                        value={draft.projectName}
+                        onChange={(e) => patch({ projectName: e.target.value })}
+                        className={field}
+                      />
                     </label>
                     <label className="grid gap-1 text-xs text-charcoal/70">
                       Client
-                      <select value={draft.clientId} onChange={(e) => patch({ clientId: e.target.value })} className={field}>
+                      <select
+                        value={draft.clientId}
+                        onChange={(e) => patch({ clientId: e.target.value })}
+                        className={field}
+                      >
                         <option value="">No client</option>
                         {catalog.clients
                           .filter((c) => !c.archived)
@@ -230,14 +262,22 @@ export default function BudgetImport({
                     {draft.clientId === "__new" && (
                       <label className="col-start-2 grid gap-1 text-xs text-charcoal/70">
                         New client name
-                        <input value={draft.newClientName} onChange={(e) => patch({ newClientName: e.target.value })} className={field} />
+                        <input
+                          value={draft.newClientName}
+                          onChange={(e) => patch({ newClientName: e.target.value })}
+                          className={field}
+                        />
                       </label>
                     )}
                   </div>
                 ) : (
                   <label className="grid gap-1 text-xs text-charcoal/70">
                     Project
-                    <select value={draft.projectId} onChange={(e) => patch({ projectId: e.target.value })} className={field}>
+                    <select
+                      value={draft.projectId}
+                      onChange={(e) => patch({ projectId: e.target.value })}
+                      className={field}
+                    >
                       <option value="">Choose a project…</option>
                       {activeProjects.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -246,7 +286,8 @@ export default function BudgetImport({
                       ))}
                     </select>
                     <span className="text-charcoal/60">
-                      Tasks are matched by name; missing ones are created. This replaces the project&apos;s whole budget.
+                      Tasks are matched by name and missing ones are created. This replaces the project&apos;s current
+                      budget.
                     </span>
                   </label>
                 )}
@@ -279,37 +320,58 @@ export default function BudgetImport({
                 <tbody>
                   {draft.tasks.map((t) => (
                     <tr key={t.key} className={`border-b border-light ${t.include ? "" : "opacity-50"}`}>
-                      <td className="py-1.5 text-center">
+                      <td className="py-1.5 text-center align-top">
                         <input
                           type="checkbox"
                           checked={t.include}
                           onChange={(e) => patchTask(t.key, { include: e.target.checked })}
                           aria-label={`Include ${t.name}`}
-                          className="h-4 w-4 accent-[#00D6B3]"
+                          className="mt-2.5 h-4 w-4 accent-[#00D6B3]"
                         />
                       </td>
-                      <td className="py-1.5 pr-2">
-                        <input value={t.name} onChange={(e) => patchTask(t.key, { name: e.target.value })} aria-label="Task name" className={`${field} w-full`} />
+                      <td className="py-1.5 pr-2 align-top">
+                        <input
+                          value={t.name}
+                          onFocus={() => !t.include && patchTask(t.key, { include: true })}
+                          onChange={(e) => {
+                            patchTask(t.key, { name: e.target.value });
+                            if (nameErrors.has(t.key)) {
+                              const next = new Map(nameErrors);
+                              next.delete(t.key);
+                              setNameErrors(next);
+                            }
+                          }}
+                          placeholder="Task name"
+                          aria-label="Task name"
+                          aria-invalid={nameErrors.has(t.key)}
+                          className={`${nameErrors.has(t.key) ? fieldError : field} w-full`}
+                        />
+                        {nameErrors.has(t.key) && (
+                          <p className="mt-0.5 text-[11px] text-danger">{nameErrors.get(t.key)}</p>
+                        )}
                       </td>
                       {LEVELS.map((l) => (
-                        <td key={l} className="px-1 py-1.5">
+                        <td key={l} className="px-1 py-1.5 align-top">
                           <input
                             type="number"
                             min={0}
                             step={0.5}
                             value={t[l] || ""}
+                            onFocus={() => !t.include && patchTask(t.key, { include: true })}
                             onChange={(e) => patchTask(t.key, { [l]: Math.max(0, Number(e.target.value) || 0) })}
                             aria-label={`${LEVEL_LABELS[l]} hours for ${t.name}`}
                             className={`${field} tabular w-full text-center`}
                           />
                         </td>
                       ))}
-                      <td className="py-1.5 text-center">
+                      <td className="py-1.5 text-center align-top">
                         <button
                           type="button"
-                          onClick={() => setDraft((d) => (d ? { ...d, tasks: d.tasks.filter((x) => x.key !== t.key) } : d))}
+                          onClick={() =>
+                            setDraft((d) => (d ? { ...d, tasks: d.tasks.filter((x) => x.key !== t.key) } : d))
+                          }
                           aria-label={`Remove ${t.name}`}
-                          className="rounded p-1 text-medium hover:bg-lightest hover:text-danger"
+                          className="mt-1.5 rounded p-1 text-medium hover:bg-lightest hover:text-danger"
                         >
                           <X size={15} />
                         </button>
@@ -322,7 +384,15 @@ export default function BudgetImport({
                 type="button"
                 onClick={() =>
                   setDraft((d) =>
-                    d ? { ...d, tasks: [...d.tasks, { key: nextKey++, include: true, name: "", director: 0, manager: 0, analyst: 0 }] } : d
+                    d
+                      ? {
+                          ...d,
+                          tasks: [
+                            ...d.tasks,
+                            { key: nextKey++, include: true, name: "", director: 0, manager: 0, analyst: 0 },
+                          ],
+                        }
+                      : d
                   )
                 }
                 className="flex w-fit items-center gap-1 text-sm font-semibold text-teal hover:underline"
@@ -333,7 +403,11 @@ export default function BudgetImport({
             </div>
 
             <div className="flex justify-end gap-2 border-t border-light px-6 py-4">
-              <button type="button" onClick={() => setDraft(null)} className="h-9 rounded-md px-4 text-sm text-charcoal hover:bg-lightest">
+              <button
+                type="button"
+                onClick={() => setDraft(null)}
+                className="h-9 rounded-md px-4 text-sm text-charcoal hover:bg-lightest"
+              >
                 Cancel
               </button>
               <button

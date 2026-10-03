@@ -24,7 +24,7 @@ import {
   type Level,
   type LevelHours,
 } from "@/lib/budget";
-import { downloadSheet, downloadTemplate } from "@/lib/budgetSheet";
+import { downloadSheet } from "@/lib/budgetSheet";
 import { displayName } from "@/lib/people";
 import { percent } from "@/lib/report";
 import { formatDateTime, parseDurationInput } from "@/lib/time";
@@ -287,13 +287,6 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
             projectId={projectId}
             onImported={(id) => (id === projectId ? budget.reload() : router.push(`/team/projects/${id}`))}
           />
-          <button
-            type="button"
-            onClick={() => downloadTemplate()}
-            className="flex h-9 items-center gap-1.5 rounded-md border border-light bg-white px-3 text-sm font-medium text-navy hover:bg-lightest"
-          >
-            <Download size={15} /> Template
-          </button>
           <Popover
             open={exportOpen}
             onOpenChange={setExportOpen}

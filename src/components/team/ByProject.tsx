@@ -2,11 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Bar } from "@/components/team/bits";
 import DateRangePicker from "@/components/DateRangePicker";
-import BudgetImport from "@/components/budget/BudgetImport";
 import { useTimeReport } from "@/components/team/useTimeReport";
 import type { Catalog } from "@/lib/useCatalog";
 import { percent, projectTree, type ProjectNode } from "@/lib/report";
@@ -29,7 +27,6 @@ export default function ByProject({
   tz: string;
   todayKey: string;
 }) {
-  const router = useRouter();
   const [from, setFrom] = useState<string | null>(null);
   const [to, setTo] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -41,7 +38,17 @@ export default function ByProject({
       const project = p.id ? catalog.projectById.get(p.id) : undefined;
       return project?.client_id ? (catalog.clientById.get(project.client_id)?.name ?? "") : "";
     };
-    const tree = projectTree(report.rows).filter((p) => {
+    // All time: every active project, even with no hours yet (e.g. a budget
+    // just imported). With a date range: only projects with time in it.
+    const withTime = projectTree(report.rows);
+    const seen = new Set(withTime.map((p) => p.id));
+    const empty: ProjectNode[] =
+      from || to
+        ? []
+        : catalog.projects
+            .filter((p) => !p.archived && !seen.has(p.id))
+            .map((p) => ({ id: p.id, seconds: 0, tasks: [] }));
+    const tree = [...withTime, ...empty].filter((p) => {
       if (!q) return true;
       const name = p.id ? (catalog.projectById.get(p.id)?.name ?? "") : "no project";
       return name.toLowerCase().includes(q) || clientName(p).toLowerCase().includes(q);
@@ -51,7 +58,7 @@ export default function ByProject({
     return [...byClient]
       .map(([name, projects]) => ({ name, projects }))
       .sort((a, b) => (!a.name ? 1 : !b.name ? -1 : a.name.localeCompare(b.name)));
-  }, [report.rows, catalog.projectById, catalog.clientById, query]);
+  }, [report.rows, catalog.projects, catalog.projectById, catalog.clientById, query, from, to]);
 
   const maxProject = Math.max(0, ...groups.flatMap((g) => g.projects.map((p) => p.seconds)));
 
@@ -77,16 +84,19 @@ export default function ByProject({
             setTo(b);
           }}
         />
-        <div className="ml-auto">
-          <BudgetImport catalog={catalog} onImported={(id) => router.push(`/team/projects/${id}`)} />
-        </div>
       </div>
 
       {!report.loaded ? (
         <p className="px-4 py-10 text-center text-sm text-charcoal/60">Loading…</p>
       ) : groups.length === 0 ? (
         <p className="px-4 py-10 text-center text-sm text-charcoal/70">
-          {query ? <>Nothing matches &ldquo;{query}&rdquo;.</> : "No time logged in this range."}
+          {query ? (
+            <>Nothing matches &ldquo;{query}&rdquo;.</>
+          ) : from || to ? (
+            "No time logged in this range."
+          ) : (
+            "No projects yet."
+          )}
         </p>
       ) : (
         groups.map((g) => (

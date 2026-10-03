@@ -1,6 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Download } from "lucide-react";
+import BudgetImport from "@/components/budget/BudgetImport";
+import { downloadTemplate } from "@/lib/budgetSheet";
 import PageHeader from "@/components/PageHeader";
 import WeekNav from "@/components/WeekNav";
 import ExportCsv from "@/components/ExportCsv";
@@ -30,6 +34,7 @@ export default function TeamOverview({ viewer, initialTab = "person" }: { viewer
   const [weekKey, setWeekKey] = useState(() => weekStart(dayKey(new Date(), tz)));
   const [tab, setTab] = useState<Tab>(initialTab);
 
+  const router = useRouter();
   const catalog = useCatalog(viewer.id);
   const team = useTeamWeek(tz, weekKey);
 
@@ -43,6 +48,18 @@ export default function TeamOverview({ viewer, initialTab = "person" }: { viewer
   return (
     <>
       <PageHeader title="Team Overview">
+        {tab === "project" && (
+          <>
+            <BudgetImport catalog={catalog} onImported={(id) => router.push(`/team/projects/${id}`)} />
+            <button
+              type="button"
+              onClick={() => downloadTemplate()}
+              className="flex h-9 items-center gap-1.5 rounded-md border border-light bg-white px-3 text-sm font-medium text-navy hover:bg-lightest"
+            >
+              <Download size={15} /> Template
+            </button>
+          </>
+        )}
         <ExportCsv catalog={catalog} tz={tz} weekKey={weekKey} note="Everyone's time." />
         {tab === "person" && <WeekNav weekKey={weekKey} todayKey={todayKey} onChange={setWeekKey} />}
       </PageHeader>
