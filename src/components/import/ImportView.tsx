@@ -11,7 +11,7 @@ import { useImportData } from "@/components/import/useImportData";
 import type { Viewer } from "@/components/tracker/TimeTracker";
 import { readTimeExport, type ParseResult } from "@/lib/importParse";
 import { useCatalog } from "@/lib/useCatalog";
-import { dayKey, formatHoursShort, shortDate, parseKey } from "@/lib/time";
+import { formatHoursShort, shortDate, parseKey } from "@/lib/time";
 
 type Step = "people" | "names" | "done";
 const STEPS: { id: Step | "file" | "review"; label: string }[] = [
@@ -35,7 +35,6 @@ export default function ImportView({ viewer }: { viewer: Viewer }) {
   const [step, setStep] = useState<Step>("people");
   const [reading, setReading] = useState(false);
   const [showProblems, setShowProblems] = useState(false);
-  const todayKey = dayKey(new Date(), viewer.timezone);
 
   const onFile = async (file: File) => {
     setReading(true);
@@ -183,7 +182,6 @@ export default function ImportView({ viewer }: { viewer: Viewer }) {
                 parsed={parsed}
                 catalog={catalog}
                 data={data}
-                todayKey={todayKey}
                 onDone={() => setStep("done")}
               />
             ) : (

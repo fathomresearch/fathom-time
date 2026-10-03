@@ -7,7 +7,7 @@ import type { ParseResult } from "@/lib/importParse";
 import type { Catalog } from "@/lib/useCatalog";
 import type { Mapping, useImportData } from "@/components/import/useImportData";
 import { PROJECT_COLORS } from "@/lib/data";
-import { addDays, formatHoursShort } from "@/lib/time";
+import { formatHoursShort } from "@/lib/time";
 
 const NEW = "__new";
 const NONE = "__none";
@@ -19,20 +19,18 @@ type ClientGroup = Group & { projects: ProjectGroup[] };
 /**
  * Step 3: which client, project and task each name in the file is. Rows
  * start on a remembered match, the same name, a similar name to check, or
- * "Create new". Projects with no entries in the last 90 days are created
- * archived by default.
+ * "Create new". New projects are created active unless "Create as archived"
+ * is ticked. Choices are remembered, so each name is confirmed only once.
  */
 export default function NamesStep({
   parsed,
   catalog,
   data,
-  todayKey,
   onDone,
 }: {
   parsed: ParseResult;
   catalog: Catalog;
   data: ReturnType<typeof useImportData>;
-  todayKey: string;
   onDone: () => void;
 }) {
   const src = parsed.source;
@@ -146,10 +144,8 @@ export default function NamesStep({
   ]);
 
   const [choice, setChoice] = useState(initial.choice);
-  const cutoff = addDays(todayKey, -90);
-  const [archived, setArchived] = useState<Map<string, boolean>>(
-    () => new Map(groups.flatMap((c) => c.projects.map((p) => [p.key, p.lastDate < cutoff] as [string, boolean])))
-  );
+  // New projects are active unless "Create as archived" is ticked.
+  const [archived, setArchived] = useState<Map<string, boolean>>(new Map());
   const [saving, setSaving] = useState(false);
 
   const set = (k: string, v: string) => setChoice((m) => new Map(m).set(k, v));
@@ -245,8 +241,8 @@ export default function NamesStep({
     <div>
       <p className="border-b border-light px-5 py-3 text-sm text-charcoal">
         Which client, project and task is each name in the file? Green matches are certain; check the yellow ones.
-        &ldquo;Create new&rdquo; adds it to Fathom Time. Projects with no time in the last 90 days are created as
-        archived (untick to keep them active).
+        &ldquo;Create new&rdquo; adds it to Fathom Time (tick &ldquo;Create as archived&rdquo; for old projects you
+        don&apos;t want in the pickers). Your choices are remembered, so each name only needs confirming once.
       </p>
       <div className="divide-y divide-light">
         {groups.map((c) => {

@@ -101,7 +101,9 @@ export default function PeopleStep({
   return (
     <div>
       <p className="border-b border-light px-5 py-3 text-sm text-charcoal">
-        Who is each person in the file? Green matches are certain; check the yellow ones. People with no match become
+        Who is each person in the file? Each person is listed once, however many entries they have. Green matches are
+        certain; check the yellow ones. Your choices are remembered, so future imports match them automatically. People
+        with no match become
         <strong> former members</strong>: they can&apos;t sign in, but their hours count. If one of them signs in later,
         the Director can link them in Manage team.
       </p>
