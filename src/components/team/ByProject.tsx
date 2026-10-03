@@ -10,7 +10,7 @@ import BudgetImport from "@/components/budget/BudgetImport";
 import { useTimeReport } from "@/components/team/useTimeReport";
 import type { Catalog } from "@/lib/useCatalog";
 import { percent, projectTree, type ProjectNode } from "@/lib/report";
-import { STATUS_CLASS, budgetStatus, hoursCell } from "@/lib/budget";
+import { STATUS_CLASS, budgetStatus, hoursCell, type Thresholds } from "@/lib/budget";
 import { formatHoursShort } from "@/lib/time";
 
 /**
@@ -104,6 +104,7 @@ export default function ByProject({
                   maxProject={maxProject}
                   budgetHours={p.id ? (report.budgetByProject.get(p.id) ?? 0) : 0}
                   allTimeSeconds={p.id ? (report.allTimeByProject.get(p.id) ?? 0) : 0}
+                  thresholds={p.id ? report.thresholdsByProject.get(p.id) : undefined}
                 />
               ))}
             </div>
@@ -111,8 +112,8 @@ export default function ByProject({
         ))
       )}
       <p className="border-t border-light px-5 py-3 text-xs text-charcoal/70">
-        Share of each person within a stage is the starting point for contribution-based pay later. Budget
-        use always compares all-time hours with the project&apos;s budget, whatever range is shown.
+        Share of each person within a stage is the starting point for contribution-based pay later. Budget use always
+        compares all-time hours with the project&apos;s budget, whatever range is shown.
       </p>
     </div>
   );
@@ -125,6 +126,7 @@ function ProjectBlock({
   maxProject,
   budgetHours,
   allTimeSeconds,
+  thresholds,
 }: {
   node: ProjectNode;
   catalog: Catalog;
@@ -132,6 +134,7 @@ function ProjectBlock({
   maxProject: number;
   budgetHours: number;
   allTimeSeconds: number;
+  thresholds?: Thresholds;
 }) {
   const project = p.id ? catalog.projectById.get(p.id) : undefined;
   const maxTask = p.tasks[0]?.seconds ?? 0;
@@ -157,7 +160,12 @@ function ProjectBlock({
         value={formatHoursShort(p.seconds)}
         extra={
           project ? (
-            <BudgetBadge projectId={project.id} budgetHours={budgetHours} actualHours={allTimeSeconds / 3600} />
+            <BudgetBadge
+              projectId={project.id}
+              budgetHours={budgetHours}
+              actualHours={allTimeSeconds / 3600}
+              thresholds={thresholds}
+            />
           ) : null
         }
       />
@@ -192,31 +200,36 @@ function ProjectBlock({
   );
 }
 
-/** "62% of 70.0h" colored by the budget rule, or a link to add a budget. */
+/** "62% of 70.0h" colored by the project's thresholds, then Add budget / Edit budget. */
 function BudgetBadge({
   projectId,
   budgetHours,
   actualHours,
+  thresholds,
 }: {
   projectId: string;
   budgetHours: number;
   actualHours: number;
+  thresholds?: Thresholds;
 }) {
-  if (budgetHours <= 0) {
-    return (
-      <Link href={`/team/projects/${projectId}`} className="text-xs text-blue hover:underline">
-        Add budget
-      </Link>
-    );
-  }
+  const has = budgetHours > 0;
   return (
-    <Link
-      href={`/team/projects/${projectId}`}
-      title="All-time hours compared with the budget"
-      className={`whitespace-nowrap rounded px-1.5 py-0.5 text-xs ${STATUS_CLASS[budgetStatus(actualHours, budgetHours)]}`}
-    >
-      {percent(actualHours / budgetHours)} of {hoursCell(budgetHours)}h
-    </Link>
+    <span className="inline-flex items-center justify-end gap-2">
+      {has && (
+        <span
+          title="All-time hours compared with the budget"
+          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs ${STATUS_CLASS[budgetStatus(actualHours, budgetHours, thresholds)]}`}
+        >
+          {percent(actualHours / budgetHours)} of {hoursCell(budgetHours)}h
+        </span>
+      )}
+      <Link
+        href={`/team/projects/${projectId}`}
+        className="whitespace-nowrap rounded-full border border-light bg-white px-2.5 py-0.5 font-display text-xs font-semibold text-navy hover:bg-lightest"
+      >
+        {has ? "Edit budget" : "Add budget"}
+      </Link>
+    </span>
   );
 }
 
@@ -235,7 +248,7 @@ function Line({
 }) {
   return (
     <div
-      className={`grid grid-cols-[minmax(0,280px)_1fr_64px_120px] items-center gap-3 ${small ? "text-xs" : "text-sm"}`}
+      className={`grid grid-cols-[minmax(0,280px)_1fr_64px_230px] items-center gap-3 ${small ? "text-xs" : "text-sm"}`}
     >
       <span className="flex min-w-0">{label}</span>
       <Bar share={share} />

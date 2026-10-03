@@ -7,25 +7,36 @@ export type Level = Role;
 export const LEVELS: Level[] = ["director", "manager", "analyst"];
 export const LEVEL_LABELS = ROLE_LABELS;
 
-/** Level colors from the Fathom palette: Deep Purple, Blue, Teal. */
-export const LEVEL_STYLE: Record<Level, { dot: string; text: string; soft: string; faint: string }> = {
-  director: { dot: "bg-purple", text: "text-purple", soft: "bg-[#ECEAF3]", faint: "bg-[#F6F5F9]" },
-  manager: { dot: "bg-blue", text: "text-blue", soft: "bg-[#E6EFFE]", faint: "bg-[#F3F7FF]" },
-  analyst: { dot: "bg-teal", text: "text-[#00866F]", soft: "bg-teal-soft", faint: "bg-[#F2FDFB]" },
+/**
+ * Level colors: one soft navy scale with transparency, Director darkest,
+ * Manager middle, Analyst lightest. As light as the budget status colors.
+ */
+export const LEVEL_STYLE: Record<Level, { dot: string; faint: string }> = {
+  director: { dot: "bg-[#1E3354]", faint: "bg-[#1E3354]/[0.10]" },
+  manager: { dot: "bg-[#1E3354]/55", faint: "bg-[#1E3354]/[0.055]" },
+  analyst: { dot: "bg-[#1E3354]/25", faint: "bg-[#1E3354]/[0.025]" },
 };
 
 export type LevelHours = Record<Level, number>;
 export const emptyLevels = (): LevelHours => ({ director: 0, manager: 0, analyst: 0 });
 export const sumLevels = (h: LevelHours) => h.director + h.manager + h.analyst;
 
-/** Under 90% of budget, 90 to 100%, or over. No budget but time logged counts as over. */
+/** Amber from `warn`% of budget, red above `over`%. Set per project; these are the defaults. */
+export type Thresholds = { warn: number; over: number };
+export const DEFAULT_THRESHOLDS: Thresholds = { warn: 90, over: 100 };
+
+/** Under the warn line, between warn and over, or over. No budget but time logged counts as over. */
 export type BudgetStatus = "none" | "under" | "near" | "over";
 
-export function budgetStatus(actualHours: number, budgetHours: number): BudgetStatus {
+export function budgetStatus(
+  actualHours: number,
+  budgetHours: number,
+  t: Thresholds = DEFAULT_THRESHOLDS
+): BudgetStatus {
   if (budgetHours <= 0) return actualHours > 0.005 ? "over" : "none";
-  const share = actualHours / budgetHours;
-  if (share > 1.0001) return "over";
-  return share >= 0.9 ? "near" : "under";
+  const pct = (actualHours / budgetHours) * 100;
+  if (pct > t.over + 0.01) return "over";
+  return pct >= t.warn ? "near" : "under";
 }
 
 export const STATUS_CLASS: Record<BudgetStatus, string> = {

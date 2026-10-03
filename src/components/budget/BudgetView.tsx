@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, Download, Flag, Pencil, Plus, Printer, X } from "lucide-react";
+import { ChevronLeft, Download, Flag, Plus, Printer, X } from "lucide-react";
 import Popover from "@/components/tracker/Popover";
 import InlineInput from "@/components/tracker/InlineInput";
 import { toast } from "@/components/Toaster";
@@ -17,6 +17,7 @@ import {
   LEVEL_STYLE,
   STATUS_CLASS,
   budgetStatus,
+  type Thresholds,
   emptyLevels,
   hoursCell,
   sumLevels,
@@ -51,8 +52,6 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
   const [showNames, setShowNames] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [newTask, setNewTask] = useState<string | null>(null);
-  // View mode by default; "Edit budget" turns on editing numbers and tasks.
-  const [editing, setEditing] = useState(false);
 
   const project = catalog.projectById.get(projectId);
   const client = project?.client_id ? catalog.clientById.get(project.client_id) : undefined;
@@ -103,7 +102,9 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
 
   const budgetTotal = sumLevels(totals.budget);
   const actualTotal = sumLevels(totals.actual);
-  const overCount = lines.filter((l) => budgetStatus(sumLevels(l.actual), sumLevels(l.budget)) === "over").length;
+  const overCount = lines.filter(
+    (l) => budgetStatus(sumLevels(l.actual), sumLevels(l.budget), budget.thresholds) === "over"
+  ).length;
   const editor = budget.meta?.updated_by ? catalog.personById.get(budget.meta.updated_by) : undefined;
   const nameOf = (u: string) => displayName(catalog.personById.get(u));
 
@@ -189,7 +190,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
       {l === "total" ? (
         <span className="font-display text-xs font-semibold text-charcoal/70">Total</span>
       ) : (
-        <span className={`inline-flex items-center gap-1.5 font-display text-xs font-semibold ${LEVEL_STYLE[l].text}`}>
+        <span className={`inline-flex items-center gap-1.5 font-display text-xs font-semibold text-navy`}>
           <span className={`h-2 w-2 rounded-full ${LEVEL_STYLE[l].dot}`} />
           {LEVEL_LABELS[l]}
         </span>
@@ -207,7 +208,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
         );
       return (
         <td key={l} className={`px-1 py-1 text-center ${i === 0 ? groupStart : ""} ${LEVEL_STYLE[l].faint}`}>
-          {editing && id && !total ? (
+          {id && !total ? (
             <InlineInput
               ariaLabel={`${LEVEL_LABELS[l]} budget for ${name}`}
               value={hoursCell(b[l])}
@@ -228,7 +229,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
     cols.map((l, i) => {
       const act = l === "total" ? sumLevels(a) : a[l];
       const bud = l === "total" ? sumLevels(b) : b[l];
-      const status = budgetStatus(act, bud);
+      const status = budgetStatus(act, bud, budget.thresholds);
       return (
         <td
           key={l}
@@ -280,26 +281,6 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2 print:hidden">
-          {editing ? (
-            <button
-              type="button"
-              onClick={() => {
-                setEditing(false);
-                setNewTask(null);
-              }}
-              className="flex h-9 items-center gap-1.5 rounded-md bg-navy px-4 font-display text-sm font-semibold text-white hover:brightness-110"
-            >
-              <Check size={15} /> Done
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="flex h-9 items-center gap-1.5 rounded-md border border-light bg-white px-3 text-sm font-medium text-navy hover:bg-lightest"
-            >
-              <Pencil size={14} /> {hasBudget ? "Edit budget" : "Add budget"}
-            </button>
-          )}
           <BudgetImport
             catalog={catalog}
             projectId={projectId}
@@ -363,20 +344,13 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
           sub={
             hasBudget
               ? { under: "On track", near: "Close to budget", over: "Over budget", none: "" }[
-                  budgetStatus(actualTotal, budgetTotal)
+                  budgetStatus(actualTotal, budgetTotal, budget.thresholds)
                 ]
               : undefined
           }
         />
         <Tile label="Tasks over budget" value={String(overCount)} />
       </div>
-
-      {editing && (
-        <p className="mb-3 rounded-md border border-blue/30 bg-[#F3F7FF] px-4 py-2.5 text-sm text-navy print:hidden">
-          Editing: click a budget number to change it (type 8, 1.5 or 1:30; clear it to remove), rename a task, add a
-          task at the bottom, or delete a task that has no time. Changes save as you go. Click Done when finished.
-        </p>
-      )}
 
       <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-charcoal/80">
         {LEVELS.map((l) => (
@@ -386,11 +360,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
           </span>
         ))}
         <span className="text-light">|</span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className={`rounded-full px-2 py-px ${STATUS_CLASS.under}`}>Under 90%</span>
-          <span className={`rounded-full px-2 py-px ${STATUS_CLASS.near}`}>90 to 100%</span>
-          <span className={`rounded-full px-2 py-px ${STATUS_CLASS.over}`}>Over budget</span>
-        </span>
+        <ThresholdLegend value={budget.thresholds} onChange={budget.setThresholds} />
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-light bg-white">
@@ -409,7 +379,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                   By person
                 </th>
               )}
-              {editing && <th className="print:hidden" aria-label="Actions" />}
+              <th className="print:hidden" aria-label="Actions" />
             </tr>
             <tr className="border-b border-light">
               <th />
@@ -423,34 +393,32 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                     title={`${nameOf(u)} · ${LEVEL_LABELS[lv]} on this project`}
                     className={`min-w-[76px] px-2 pb-2 pt-1 font-normal ${i === 0 ? groupStart : ""} ${personCls}`}
                   >
-                    <span
-                      className={`inline-flex items-center gap-1.5 font-display text-xs font-semibold ${LEVEL_STYLE[lv].text}`}
-                    >
+                    <span className={`inline-flex items-center gap-1.5 font-display text-xs font-semibold text-navy`}>
                       <span className={`h-2 w-2 shrink-0 rounded-full ${LEVEL_STYLE[lv].dot}`} />
                       <span className="truncate">{nameOf(u).split(" ")[0]}</span>
                     </span>
                   </th>
                 );
               })}
-              {editing && <th className="print:hidden" />}
+              <th className="print:hidden" />
             </tr>
           </thead>
           <tbody>
             {lines.length === 0 && (
               <tr>
-                <td colSpan={9 + people.length + (editing ? 1 : 0)} className="px-4 py-10 text-center text-charcoal/70">
-                  No tasks yet. Click {hasBudget ? "Edit budget" : "Add budget"} to add tasks, or Import budget.
+                <td colSpan={10 + people.length} className="px-4 py-10 text-center text-charcoal/70">
+                  No tasks yet. Add one below, or use Import budget.
                 </td>
               </tr>
             )}
             {lines.map((l) => {
               const over = sumLevels(l.actual) - sumLevels(l.budget);
-              const flagged = budgetStatus(sumLevels(l.actual), sumLevels(l.budget)) === "over";
+              const flagged = budgetStatus(sumLevels(l.actual), sumLevels(l.budget), budget.thresholds) === "over";
               return (
                 <tr key={l.id ?? "none"} className="border-b border-light last:border-0">
                   <td className="py-1 pl-2 pr-2">
                     <div className="flex min-w-[220px] items-center gap-1.5">
-                      {l.id && editing ? (
+                      {l.id ? (
                         <InlineInput
                           ariaLabel="Task name"
                           value={l.name}
@@ -486,64 +454,60 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                   {budgetCells(l.id, l.name, l.budget)}
                   {actualCells(l.actual, l.budget)}
                   {personCells(l.byPerson)}
-                  {editing && (
-                    <td className="px-1 text-center print:hidden">
-                      {l.id && l.byPerson.size === 0 && (
-                        <button
-                          type="button"
-                          onClick={() => catalog.deleteTask(l.id!)}
-                          aria-label={`Delete ${l.name}`}
-                          title="Delete task (no time logged)"
-                          className="rounded p-1 text-medium hover:bg-lightest hover:text-danger"
-                        >
-                          <X size={14} />
-                        </button>
-                      )}
-                    </td>
-                  )}
+                  <td className="px-1 text-center print:hidden">
+                    {l.id && l.byPerson.size === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => catalog.deleteTask(l.id!)}
+                        aria-label={`Delete ${l.name}`}
+                        title="Delete task (no time logged)"
+                        className="rounded p-1 text-medium hover:bg-lightest hover:text-danger"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
-            {editing && (
-              <tr className="border-t border-light print:hidden">
-                <td colSpan={9 + people.length + 1} className="px-3 py-2">
-                  {newTask === null ? (
+            <tr className="border-t border-light print:hidden">
+              <td colSpan={10 + people.length} className="px-3 py-2">
+                {newTask === null ? (
+                  <button
+                    type="button"
+                    onClick={() => setNewTask("")}
+                    className="flex items-center gap-1 text-sm font-medium text-blue hover:underline"
+                  >
+                    <Plus size={14} /> Add task
+                  </button>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      addTask();
+                    }}
+                    className="flex items-center gap-1.5"
+                  >
+                    <input
+                      autoFocus
+                      value={newTask}
+                      onChange={(e) => setNewTask(e.target.value)}
+                      onBlur={() => !newTask.trim() && setNewTask(null)}
+                      onKeyDown={(e) => e.key === "Escape" && setNewTask(null)}
+                      placeholder="Task name"
+                      aria-label="New task name"
+                      className="h-8 w-72 rounded-md border border-light px-2.5 text-sm focus:border-blue focus:outline-none"
+                    />
                     <button
-                      type="button"
-                      onClick={() => setNewTask("")}
-                      className="flex items-center gap-1 text-sm font-medium text-blue hover:underline"
+                      type="submit"
+                      className="h-8 rounded-md bg-teal px-3 font-display text-xs font-semibold text-navy"
                     >
-                      <Plus size={14} /> Add task
+                      Add
                     </button>
-                  ) : (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        addTask();
-                      }}
-                      className="flex items-center gap-1.5"
-                    >
-                      <input
-                        autoFocus
-                        value={newTask}
-                        onChange={(e) => setNewTask(e.target.value)}
-                        onBlur={() => !newTask.trim() && setNewTask(null)}
-                        onKeyDown={(e) => e.key === "Escape" && setNewTask(null)}
-                        placeholder="Task name"
-                        aria-label="New task name"
-                        className="h-8 w-72 rounded-md border border-light px-2.5 text-sm focus:border-blue focus:outline-none"
-                      />
-                      <button
-                        type="submit"
-                        className="h-8 rounded-md bg-teal px-3 font-display text-xs font-semibold text-navy"
-                      >
-                        Add
-                      </button>
-                    </form>
-                  )}
-                </td>
-              </tr>
-            )}
+                  </form>
+                )}
+              </td>
+            </tr>
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-light">
@@ -553,16 +517,48 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
               {budgetCells(null, "Total", totals.budget, true)}
               {actualCells(totals.actual, totals.budget)}
               {personCells(totals.byPerson, true)}
-              {editing && <td className="print:hidden" />}
+              <td className="print:hidden" />
             </tr>
           </tfoot>
         </table>
       </div>
 
       <p className="mt-3 text-xs text-charcoal/70 print:hidden">
-        Actual hours are all-time and leave out running timers. Each person counts at the level they had when they first
-        logged time on this project.
+        Changes save as you type. Click a budget number to change it (8, 1.5 or 1:30; clear it to remove). Actual hours
+        are all-time and leave out running timers. Each person counts at the level they had when they first logged time
+        on this project.
       </p>
     </>
+  );
+}
+
+/** Status colors with editable lines: "Under 90% · 90 to 100% · Over 100%". */
+function ThresholdLegend({ value, onChange }: { value: Thresholds; onChange: (t: Thresholds) => void }) {
+  const commit = (key: "warn" | "over", text: string) => {
+    const n = Math.round(Number(text.replace("%", "").trim()) * 10) / 10;
+    if (!Number.isFinite(n) || n <= 0 || n > 1000) return toast("Type a percentage, like 90.");
+    const next = { ...value, [key]: n };
+    if (next.warn > next.over) return toast("The amber line can't be above the red line.");
+    onChange(next);
+  };
+  const pctInput = (key: "warn" | "over") => (
+    <InlineInput
+      ariaLabel={key === "warn" ? "Amber from (% of budget)" : "Red above (% of budget)"}
+      value={`${value[key]}`}
+      onCommit={(t) => commit(key, t)}
+      className="tabular w-12 bg-white px-1 py-0 text-center text-xs ring-1 ring-inset ring-light focus:ring-0"
+    />
+  );
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span className={`rounded-full px-2 py-px ${STATUS_CLASS.under}`}>Under {value.warn}%</span>
+      <span className={`rounded-full px-2 py-px ${STATUS_CLASS.near}`}>
+        {value.warn} to {value.over}%
+      </span>
+      <span className={`rounded-full px-2 py-px ${STATUS_CLASS.over}`}>Over {value.over}%</span>
+      <span className="ml-2 inline-flex items-center gap-1 text-charcoal/70 print:hidden">
+        Amber from {pctInput("warn")}% · red above {pctInput("over")}%
+      </span>
+    </span>
   );
 }

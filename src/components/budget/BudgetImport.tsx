@@ -267,7 +267,7 @@ export default function BudgetImport({
                     <th className="py-2">Task</th>
                     {LEVELS.map((l) => (
                       <th key={l} className="py-2 text-center">
-                        <span className={`inline-flex items-center gap-1.5 ${LEVEL_STYLE[l].text}`}>
+                        <span className={`inline-flex items-center gap-1.5 text-navy`}>
                           <span className={`h-2 w-2 rounded-full ${LEVEL_STYLE[l].dot}`} />
                           {LEVEL_LABELS[l]}
                         </span>

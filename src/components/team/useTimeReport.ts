@@ -5,6 +5,7 @@ import { sb } from "@/lib/supabase/browser";
 import { toast } from "@/components/Toaster";
 import type { ReportRow } from "@/components/budget/useProjectBudget";
 import { addDays, startOfDay } from "@/lib/time";
+import type { Thresholds } from "@/lib/budget";
 
 /**
  * Hours by project, task and person, all time or From / To (day keys in
@@ -15,20 +16,22 @@ export function useTimeReport(fromKey: string | null, toKey: string | null, tz: 
   const [rows, setRows] = useState<ReportRow[]>([]);
   const [budgetByProject, setBudgetByProject] = useState<Map<string, number>>(new Map());
   const [allTimeByProject, setAllTimeByProject] = useState<Map<string, number>>(new Map());
+  const [thresholdsByProject, setThresholdsByProject] = useState<Map<string, Thresholds>>(new Map());
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
     const db = sb();
     const ranged = !!(fromKey || toKey);
-    const [r, b, all] = await Promise.all([
+    const [r, b, t, all] = await Promise.all([
       db.rpc("time_report", {
         from_ts: fromKey ? startOfDay(fromKey, tz).toISOString() : null,
         to_ts: toKey ? startOfDay(addDays(toKey, 1), tz).toISOString() : null,
       }),
       db.from("task_budgets").select("hours,tasks!inner(project_id)"),
+      db.from("project_budgets").select("project_id,warn_pct,over_pct"),
       ranged ? db.rpc("time_report") : null,
     ]);
-    if (r.error || b.error || all?.error) {
+    if (r.error || b.error || t.error || all?.error) {
       toast("Couldn't load project totals.");
       return;
     }
@@ -43,6 +46,14 @@ export function useTimeReport(fromKey: string | null, toKey: string | null, tz: 
     }
     setRows((r.data as ReportRow[]) ?? []);
     setAllTimeByProject(allTime);
+    setThresholdsByProject(
+      new Map(
+        (t.data as { project_id: string; warn_pct: number; over_pct: number }[]).map((x) => [
+          x.project_id,
+          { warn: Number(x.warn_pct), over: Number(x.over_pct) },
+        ])
+      )
+    );
     setBudgetByProject(budgets);
     setLoaded(true);
   }, [fromKey, toKey, tz]);
@@ -52,5 +63,5 @@ export function useTimeReport(fromKey: string | null, toKey: string | null, tz: 
     load();
   }, [load]);
 
-  return { rows, budgetByProject, allTimeByProject, loaded, reload: load };
+  return { rows, budgetByProject, allTimeByProject, thresholdsByProject, loaded, reload: load };
 }
