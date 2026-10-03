@@ -1,5 +1,5 @@
 -- =====================================================================
--- Fathom Time: security check (run after migrations 003 to 005)
+-- Fathom Time: security check (run after migrations 003 to 006)
 -- Creates temporary test people (IDs start with e0000000), signs in as
 -- each behind the scenes, and tries things they should and should not be
 -- able to do. Removes everything it created at the end; real data is
@@ -255,6 +255,16 @@ exception when others then
   insert into rls_results (check_name, pass, detail) values ('Yellow line can''t be above the red line', true, 'blocked: ' || sqlerrm);
 end $$;
 
+do $$
+declare n int;
+begin
+  update public.profiles set name = 'Renamed' where id = 'e0000000-0000-4000-a000-000000000003';
+  get diagnostics n = row_count;
+  insert into rls_results (check_name, pass, detail) values ('Manager cannot rename someone else', n = 0, n || ' rows changed');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Manager cannot rename someone else', true, 'blocked: ' || sqlerrm);
+end $$;
+
 -- ---------------------------------------------------------------------
 -- As the Director
 -- ---------------------------------------------------------------------
@@ -302,6 +312,32 @@ begin
   select count(*) into n from public.time_entries
   where user_id = 'e0000000-0000-4000-a000-000000000004' and end_at is null;
   insert into rls_results (check_name, pass, detail) values ('Starting a new timer stops the old one', n = 1, n || ' running timer(s)');
+end $$;
+
+do $$
+declare n int;
+begin
+  update public.profiles set name = 'Test Analyst 2 (renamed)' where id = 'e0000000-0000-4000-a000-000000000004';
+  get diagnostics n = row_count;
+  insert into rls_results (check_name, pass, detail) values ('Director can rename someone', n = 1, n || ' row changed');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Director can rename someone', false, 'blocked: ' || sqlerrm);
+end $$;
+
+-- Back to the Analyst: the test task now has a budget (set by the Manager).
+reset role;
+select set_config('request.jwt.claims',
+  '{"sub":"e0000000-0000-4000-a000-000000000003","role":"authenticated"}', true);
+set local role authenticated;
+
+do $$
+declare n int;
+begin
+  delete from public.tasks where id = 'e0000000-0000-4000-a300-000000000001';
+  get diagnostics n = row_count;
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot delete a task that has a budget', n = 0, n || ' rows deleted');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot delete a task that has a budget', true, 'blocked: ' || sqlerrm);
 end $$;
 
 -- ---------------------------------------------------------------------

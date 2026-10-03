@@ -15,7 +15,7 @@ import { dayKey, formatHoursShort, weekStart } from "@/lib/time";
 
 export type PersonInfo = { id: string; name: string; email: string; active: boolean };
 
-/** One person's week for the boss: status, totals, and their editable entries. */
+/** One person's week for directors and managers: status, totals, and their editable entries. */
 export default function PersonView({ person, viewer }: { person: PersonInfo; viewer: Viewer }) {
   const tz = viewer.timezone;
   const now = useNow(60_000);

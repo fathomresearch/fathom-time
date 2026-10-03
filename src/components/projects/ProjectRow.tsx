@@ -389,7 +389,7 @@ function TaskChip({
           <ArchiveRestore size={13} />
         </button>
       ) : allHours ? (
-        // The boss sees everyone's hours, so offer only what will work.
+        // Directors and managers see everyone's hours, so offer only what will work.
         hoursLoaded && seconds === 0 ? (
           deleteButton
         ) : (

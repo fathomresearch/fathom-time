@@ -56,10 +56,11 @@ DEFAULT_TIMEZONE=America/Chicago
 - `migrations/001_schema.sql` was run in the Supabase SQL Editor. Tables: `profiles`, `clients`, `projects`, `tasks` (tasks = stages; has `budget_hours`, `sort_order`, `archived`), `tags`, `time_entries` (`end_at` null = running; `tz`; `created_by`, `updated_by`, `updated_at`), `time_entry_tags`, `favorites`.
 - `migrations/002_manager_role.sql`: manager role, `can_manage_projects()`, project/task/client write policies for boss + manager, `project_hours()` (boss: everyone; others: own).
 - `migrations/003_director_manager_analyst.sql`: role rename, `is_director()`, `is_lead()`, new profile guard, projects open to everyone, `project_hours()` for leads. Drops `is_boss()`, `can_manage_projects()`, `guard_archive()`.
+- `migrations/006_protect_budgets_and_profiles.sql`: only directors/managers can delete a project or task that has a budget; only you or the Director can change your name or time zone.
 - Helpers `is_director()`, `is_lead()`, `is_active_user()`. RLS on every table; analysts only touch their own entries; directors and managers touch everyone's.
 - Triggers: profile created on sign-up; guards on role/active changes (boss can't demote or deactivate self); (the archive guard was removed in 003; anyone can archive); `created_by` / `updated_by` stamped from `auth.uid()` so "Edited by" can't be faked; a task must belong to the entry's project; inserting a running entry stops the person's other running entry.
 - FK `on delete restrict` from `time_entries` to projects and tasks: deleting a project or task with time fails. Show "Archive it instead."
-- Demo data: `seed/seed_demo.sql` (all demo IDs start with `d0000000`), removal scripts in `seed/`. `tests/rls_check.sql` creates its own temporary test people (IDs `e0000000…`), removes them at the end, and must return 29 rows with pass = true (roles plus budgets). It doesn't need the demo data.
+- Demo data: `seed/seed_demo.sql` (all demo IDs start with `d0000000`), removal scripts in `seed/`. `tests/rls_check.sql` creates its own temporary test people (IDs `e0000000…`), removes them at the end, and must return 32 rows with pass = true (roles, budgets, protections). It doesn't need the demo data.
 - Schema changes: write a new numbered migration file (`002_...sql`) and tell the user to run it in the SQL Editor. Don't edit 001.
 
 ## Code map

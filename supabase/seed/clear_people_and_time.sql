@@ -1,8 +1,8 @@
 -- =====================================================================
 -- Fresh start before real use: deletes EVERY time entry and EVERY
--- account except admin@fathomresearch.ai, which stays boss.
+-- account except admin@fathomresearch.ai, which stays Director.
 -- Keeps clients, projects, tasks and tags (credited to admin).
--- Anyone else can sign in again and starts as a new employee.
+-- Anyone else can sign in again and starts as a new Analyst.
 -- Can't be undone. Run in the Supabase SQL Editor.
 -- =====================================================================
 
@@ -25,8 +25,8 @@ begin
   update public.clients  set created_by = admin_id where created_by is null;
   update public.tags     set created_by = admin_id where created_by is null;
 
-  -- Make sure admin is an active boss.
-  update public.profiles set role = 'boss', active = true, role_initialized = true where id = admin_id;
+  -- Make sure admin is an active Director.
+  update public.profiles set role = 'director', active = true, role_initialized = true where id = admin_id;
 end $$;
 
 select

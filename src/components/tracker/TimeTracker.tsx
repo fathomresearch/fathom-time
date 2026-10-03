@@ -13,7 +13,7 @@ export type Viewer = { id: string; role: Role; timezone: string };
 
 /**
  * The entry bar and entry list for one person. On the Time Tracker the
- * person is you; on a team member's page (Phase 7) it's them, and the boss
+ * person is you; on a team member's page (Phase 7) it's them, and a director or manager
  * edits their time.
  */
 export default function TimeTracker({

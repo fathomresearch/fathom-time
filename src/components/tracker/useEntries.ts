@@ -15,7 +15,7 @@ const REFRESH_MS = 20_000;
 /**
  * One person's entries: loading, live refresh, and every change.
  * `ownerId` is whose time it is; `viewerId` is who is signed in
- * (the boss can act on someone else's entries).
+ * (directors and managers can act on someone else's entries).
  */
 export function useEntries(ownerId: string, viewerId: string, tz: string) {
   const [entries, setEntries] = useState<Entry[]>([]);

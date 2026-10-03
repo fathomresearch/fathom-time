@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { sb } from "@/lib/supabase/browser";
 import { toast } from "@/components/Toaster";
+import { fetchAll } from "@/lib/fetchAll";
 
 export type Hours = {
   /** Seconds of stopped time per project id and per task id. */
@@ -19,14 +20,17 @@ export function useProjectHours() {
   const [hours, setHours] = useState<Hours | null>(null);
 
   const load = useCallback(async () => {
-    const { data, error } = await sb().rpc("project_hours");
-    if (error) {
+    // Paged: the database returns at most 1000 rows per request.
+    const data = await fetchAll<{ project_id: string; task_id: string | null; seconds: number }>((a, b) =>
+      sb().rpc("project_hours").order("project_id").order("task_id").range(a, b)
+    );
+    if (!data) {
       toast("Couldn't load project hours.");
       return;
     }
     const byProject = new Map<string, number>();
     const byTask = new Map<string, number>();
-    for (const r of (data ?? []) as { project_id: string; task_id: string | null; seconds: number }[]) {
+    for (const r of data) {
       byProject.set(r.project_id, (byProject.get(r.project_id) ?? 0) + r.seconds);
       if (r.task_id) byTask.set(r.task_id, (byTask.get(r.task_id) ?? 0) + r.seconds);
     }

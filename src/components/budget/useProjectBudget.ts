@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { sb } from "@/lib/supabase/browser";
 import { toast } from "@/components/Toaster";
+import { fetchAll } from "@/lib/fetchAll";
 import { DEFAULT_THRESHOLDS, emptyLevels, type Level, type LevelHours, type Thresholds } from "@/lib/budget";
 
 export type ReportRow = { project_id: string | null; task_id: string | null; user_id: string; seconds: number };
@@ -20,8 +21,10 @@ export function useProjectBudget(projectId: string) {
   const [meta, setMeta] = useState<{ updated_at: string; updated_by: string | null } | null>(null);
   const [thresholds, setThresholdsState] = useState<Thresholds>(DEFAULT_THRESHOLDS);
   const [loaded, setLoaded] = useState(false);
+  const loadSeq = useRef(0);
 
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     const db = sb();
     const [b, l, m, r] = await Promise.all([
       db.from("task_budgets").select("task_id,level,hours,tasks!inner(project_id)").eq("tasks.project_id", projectId),
@@ -31,9 +34,12 @@ export function useProjectBudget(projectId: string) {
         .select("updated_at,updated_by,warn_pct,over_pct")
         .eq("project_id", projectId)
         .maybeSingle(),
-      db.rpc("time_report", { only_project: projectId }),
+      fetchAll<ReportRow>((a, z) =>
+        db.rpc("time_report", { only_project: projectId }).order("task_id").order("user_id").range(a, z)
+      ),
     ]);
-    if (b.error || l.error || m.error || r.error) {
+    if (seq !== loadSeq.current) return; // a newer load is on its way
+    if (b.error || l.error || m.error || !r) {
       toast("Couldn't load this project's budget.");
       return;
     }
@@ -46,10 +52,8 @@ export function useProjectBudget(projectId: string) {
     setBudgets(map);
     setLevels(new Map((l.data as { user_id: string; level: Level }[]).map((x) => [x.user_id, x.level])));
     setMeta(m.data ? { updated_at: m.data.updated_at, updated_by: m.data.updated_by } : null);
-    setThresholdsState(
-      m.data ? { warn: Number(m.data.warn_pct), over: Number(m.data.over_pct) } : DEFAULT_THRESHOLDS
-    );
-    setRows((r.data as ReportRow[]) ?? []);
+    setThresholdsState(m.data ? { warn: Number(m.data.warn_pct), over: Number(m.data.over_pct) } : DEFAULT_THRESHOLDS);
+    setRows(r);
     setLoaded(true);
   }, [projectId]);
 

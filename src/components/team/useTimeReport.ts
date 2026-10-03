@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { sb } from "@/lib/supabase/browser";
 import { toast } from "@/components/Toaster";
+import { fetchAll } from "@/lib/fetchAll";
 import type { ReportRow } from "@/components/budget/useProjectBudget";
 import { addDays, startOfDay } from "@/lib/time";
 import type { Thresholds } from "@/lib/budget";
@@ -18,33 +19,49 @@ export function useTimeReport(fromKey: string | null, toKey: string | null, tz: 
   const [allTimeByProject, setAllTimeByProject] = useState<Map<string, number>>(new Map());
   const [thresholdsByProject, setThresholdsByProject] = useState<Map<string, Thresholds>>(new Map());
   const [loaded, setLoaded] = useState(false);
+  const loadSeq = useRef(0);
 
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     const db = sb();
     const ranged = !!(fromKey || toKey);
-    const [r, b, t, all] = await Promise.all([
-      db.rpc("time_report", {
-        from_ts: fromKey ? startOfDay(fromKey, tz).toISOString() : null,
-        to_ts: toKey ? startOfDay(addDays(toKey, 1), tz).toISOString() : null,
-      }),
-      db.from("task_budgets").select("hours,tasks!inner(project_id)"),
+    // Paged: the database returns at most 1000 rows per request.
+    const report = (from: string | null, to: string | null) =>
+      fetchAll<ReportRow>((a, b) =>
+        db
+          .rpc("time_report", { from_ts: from, to_ts: to })
+          .order("project_id")
+          .order("task_id")
+          .order("user_id")
+          .range(a, b)
+      );
+    const [rows, budgetRows, t, all] = await Promise.all([
+      report(
+        fromKey ? startOfDay(fromKey, tz).toISOString() : null,
+        toKey ? startOfDay(addDays(toKey, 1), tz).toISOString() : null
+      ),
+      fetchAll((a, b) =>
+        db.from("task_budgets").select("hours,tasks!inner(project_id)").order("task_id").order("level").range(a, b)
+      ),
       db.from("project_budgets").select("project_id,warn_pct,over_pct"),
-      ranged ? db.rpc("time_report") : null,
+      ranged ? report(null, null) : null,
     ]);
-    if (r.error || b.error || t.error || all?.error) {
+    if (seq !== loadSeq.current) return; // a newer load is on its way
+    if (!rows || !budgetRows || t.error || (ranged && !all)) {
       toast("Couldn't load project totals.");
       return;
     }
     const budgets = new Map<string, number>();
-    for (const x of b.data as unknown as { hours: number; tasks: { project_id: string } }[]) {
+    // tasks!inner(...) is one task per budget row (the typing says array).
+    for (const x of budgetRows as unknown as { hours: number; tasks: { project_id: string } }[]) {
       budgets.set(x.tasks.project_id, (budgets.get(x.tasks.project_id) ?? 0) + Number(x.hours));
     }
-    const allRows = ((ranged ? all?.data : r.data) as ReportRow[]) ?? [];
+    const allRows = (ranged ? all : rows) ?? [];
     const allTime = new Map<string, number>();
     for (const x of allRows) {
       if (x.project_id) allTime.set(x.project_id, (allTime.get(x.project_id) ?? 0) + x.seconds);
     }
-    setRows((r.data as ReportRow[]) ?? []);
+    setRows(rows);
     setAllTimeByProject(allTime);
     setThresholdsByProject(
       new Map(

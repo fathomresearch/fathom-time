@@ -15,7 +15,7 @@ import DateRangePicker from "@/components/DateRangePicker";
 /**
  * Export CSV with a From / To range, starting on the week being viewed.
  * `userId` limits it to one person; without it, row-level security decides
- * (the boss gets everyone, an employee only themselves).
+ * (directors and managers get everyone, an analyst only themselves).
  */
 export default function ExportCsv({
   catalog,

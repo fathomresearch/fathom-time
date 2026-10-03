@@ -8,6 +8,7 @@ import Popover from "@/components/tracker/Popover";
 import InlineInput from "@/components/tracker/InlineInput";
 import { toast } from "@/components/Toaster";
 import BudgetImport from "@/components/budget/BudgetImport";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { Tile } from "@/components/team/bits";
 import { useProjectBudget } from "@/components/budget/useProjectBudget";
 import { useCatalog } from "@/lib/useCatalog";
@@ -52,6 +53,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
   const [showNames, setShowNames] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [newTask, setNewTask] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<{ id: string; name: string; budgeted: boolean } | null>(null);
 
   const project = catalog.projectById.get(projectId);
   const client = project?.client_id ? catalog.clientById.get(project.client_id) : undefined;
@@ -121,7 +123,11 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
     if (lines.some((l) => l.name.toLowerCase() === name.toLowerCase()))
       return toast(`"${name}" is already a task on this project.`);
     const maxOrder = Math.max(0, ...catalog.tasks.filter((t) => t.project_id === projectId).map((t) => t.sort_order));
-    if (await catalog.createTask(projectId, name, maxOrder + 1)) setNewTask("");
+    const task = await catalog.createTask(projectId, name, maxOrder + 1);
+    if (!task) return;
+    // Same name as an archived task: bring that one back instead.
+    if (task.archived) await catalog.updateTask(task.id, { archived: false });
+    setNewTask("");
   };
 
   const exportExcel = async () => {
@@ -275,7 +281,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
           </h1>
           <p className="mt-1 text-sm text-charcoal">
             {client?.name ?? "No client"}
-            {budget.meta && (
+            {budget.meta && hasBudget && (
               <span className="text-charcoal/60 print:hidden">
                 {" "}
                 · Budget last changed {formatDateTime(new Date(budget.meta.updated_at), viewer.timezone)}
@@ -439,7 +445,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
                     {l.id && l.byPerson.size === 0 && (
                       <button
                         type="button"
-                        onClick={() => catalog.deleteTask(l.id!)}
+                        onClick={() => setDeleting({ id: l.id!, name: l.name, budgeted: sumLevels(l.budget) > 0 })}
                         aria-label={`Delete ${l.name}`}
                         title="Delete task (no time logged)"
                         className="rounded p-1 text-medium hover:bg-lightest hover:text-danger"
@@ -503,6 +509,17 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
           </tfoot>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={!!deleting}
+        title={`Delete ${deleting?.name ?? "task"}?`}
+        body={deleting?.budgeted ? "Its budget hours are deleted too. This can't be undone." : "This can't be undone."}
+        onConfirm={() => {
+          if (deleting) catalog.deleteTask(deleting.id);
+          setDeleting(null);
+        }}
+        onCancel={() => setDeleting(null)}
+      />
 
       <p className="mt-3 text-xs text-charcoal/70 print:hidden">
         Changes save as you type. Click a budget number to change it (8, 1.5 or 1:30; clear it to remove). Actual hours

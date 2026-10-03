@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     return toLogin("deactivated");
   }
 
-  // First sign-in: decide boss or employee, and use the browser's time zone.
+  // First sign-in: decide director or analyst, and use the browser's time zone.
   if (!profile.role_initialized) {
     await admin
       .from("profiles")

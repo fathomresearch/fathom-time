@@ -157,6 +157,8 @@ export default function BudgetImport({
             })
           : (catalog.projectById.get(draft.projectId) ?? null);
       if (!project) return;
+      // From here on the project exists; if something below fails, a retry updates it.
+      if (draft.mode === "new") setDraft((d) => (d ? { ...d, mode: "existing", projectId: project.id } : d));
 
       const existing = catalog.tasks.filter((t) => t.project_id === project.id);
       const rows: BudgetRow[] = [];
