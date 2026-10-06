@@ -116,6 +116,10 @@ Teal `#00D6B3` accent (primary buttons use navy text on teal for contrast), Navy
 ## Later (don't build now)
 Stage-based (contribution-based) pay: `budget_hours` on tasks, a `contributions` table (project_id, task_id, user_id, percent), efficiency = budgeted hours / actual hours.
 
+## Development log
+
+`DEVLOG.md` is the plain-English history (newest first): what changed, decisions, migrations, live or not. At the end of every stage or significant change, add an entry and update "Current status" at its top.
+
 ## Checks before handing back
 - `npx eslint src` and `npx tsc --noEmit` pass.
 - `npm run build` passes.
