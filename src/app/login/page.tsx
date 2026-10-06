@@ -1,13 +1,14 @@
+"use client";
+
+import { Suspense } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import SignInButton from "@/components/SignInButton";
-import { allowedDomain } from "@/lib/config";
 
 const ERRORS: Record<string, string> = {
   deactivated:
     "Your account is deactivated. Ask your manager to reactivate it.",
   domain: "That Google account isn't allowed. Use your company account.",
-  config:
-    "Sign-in isn't finished being set up: SUPABASE_SERVICE_ROLE_KEY is missing from .env.local.",
   cancelled: "Sign-in was cancelled. Try again.",
   failed: "Sign-in didn't finish. Try again.",
   no_profile: "Your profile couldn't be loaded. Sign in again.",
@@ -38,12 +39,21 @@ function SonarRings() {
   );
 }
 
-export default async function LoginPage({
-  searchParams,
-}: PageProps<"/login">) {
-  const { error } = await searchParams;
-  const message = typeof error === "string" ? ERRORS[error] : undefined;
-  const domain = allowedDomain();
+function ErrorMessage() {
+  const error = useSearchParams().get("error");
+  const message = error ? ERRORS[error] : undefined;
+  if (!message) return null;
+  return (
+    <p
+      role="alert"
+      className="mt-6 rounded-md border border-danger/30 bg-danger/5 px-3 py-2.5 text-sm text-danger"
+    >
+      {message}
+    </p>
+  );
+}
+
+export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen">
@@ -79,22 +89,13 @@ export default async function LoginPage({
           <h2 className="font-display text-2xl font-semibold text-navy">
             Sign in to Fathom Time
           </h2>
-          <p className="mt-2 text-sm text-charcoal">
-            {domain
-              ? `Use your @${domain} Google account.`
-              : "Use your Google account."}
-          </p>
+          <p className="mt-2 text-sm text-charcoal">Use your Google account.</p>
 
-          {message && (
-            <p
-              role="alert"
-              className="mt-6 rounded-md border border-danger/30 bg-danger/5 px-3 py-2.5 text-sm text-danger"
-            >
-              {message}
-            </p>
-          )}
+          <Suspense>
+            <ErrorMessage />
+          </Suspense>
 
-          <SignInButton domain={domain} />
+          <SignInButton />
         </div>
       </section>
     </div>

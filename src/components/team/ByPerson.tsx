@@ -80,7 +80,7 @@ export default function ByPerson({
           return (
             <tr
               key={p.id}
-              onClick={() => router.push(`/team/${p.id}`)}
+              onClick={() => router.push(`/team/person/?id=${p.id}`)}
               className="cursor-pointer border-b border-light hover:bg-canvas/60"
             >
               <td className="px-4 py-2.5">
@@ -88,7 +88,7 @@ export default function ByPerson({
                   <Avatar name={p.name} email={p.email} running={!!run} />
                   <div className="min-w-0">
                     <Link
-                      href={`/team/${p.id}`}
+                      href={`/team/person/?id=${p.id}`}
                       onClick={(e) => e.stopPropagation()}
                       className="block truncate font-medium text-navy hover:underline"
                     >

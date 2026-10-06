@@ -1,0 +1,74 @@
+# Builds the website as plain files and publishes them to the public repo
+# fathomresearch/fathom-time-site, which GitHub Pages serves at
+# https://time.fathomresearch.ai. This code repo stays private.
+#
+# Repo secrets needed (Settings > Secrets and variables > Actions):
+#   SITE_DEPLOY_TOKEN              fine-grained token, Contents: read and write on fathom-time-site
+#   NEXT_PUBLIC_SUPABASE_URL       same as .env.local
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY  same as .env.local (the publishable key, not the secret key)
+
+name: Publish site
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: # notes and database files don't change the website
+      - "**.md"
+      - "supabase/**"
+      - ".github/workflows/backup.yml"
+      - ".github/workflows/keep-awake.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-site
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the secrets are set
+        env:
+          SITE_DEPLOY_TOKEN: ${{ secrets.SITE_DEPLOY_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          missing=""
+          for v in SITE_DEPLOY_TOKEN NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY; do
+            [ -z "${!v}" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "Add these secrets in Settings > Secrets and variables > Actions:$missing"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: Publish to fathom-time-site
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.SITE_DEPLOY_TOKEN }}
+          external_repository: fathomresearch/fathom-time-site
+          publish_branch: main
+          publish_dir: ./out
+          cname: time.fathomresearch.ai
+          force_orphan: true # keep only the latest version, no history
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+          full_commit_message: "Publish ${{ github.sha }}"

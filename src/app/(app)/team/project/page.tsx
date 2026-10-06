@@ -3,21 +3,22 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import NoAccess from "@/components/NoAccess";
-import TeamOverview from "@/components/team/TeamOverview";
+import BudgetView from "@/components/budget/BudgetView";
 import { useSession } from "@/lib/session";
 import { isLead } from "@/lib/types";
 
-function Team() {
+/** A project's budget page: /team/project/?id=<project id>. */
+function ProjectBudget() {
   const { viewer } = useSession();
-  const tab = useSearchParams().get("tab");
+  const id = useSearchParams().get("id") ?? "";
   if (!isLead(viewer.role)) return <NoAccess />;
-  return <TeamOverview viewer={viewer} initialTab={tab === "project" || tab === "manage" ? tab : "person"} />;
+  return <BudgetView key={id} projectId={id} viewer={viewer} />;
 }
 
-export default function TeamPage() {
+export default function ProjectBudgetPage() {
   return (
     <Suspense>
-      <Team />
+      <ProjectBudget />
     </Suspense>
   );
 }

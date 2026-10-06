@@ -241,3 +241,14 @@ export function parseDurationInput(
   }
   return null;
 }
+
+/** A real IANA time zone name, like "America/Chicago". */
+export function isValidTimezone(tz: string | null | undefined): tz is string {
+  if (!tz) return false;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}

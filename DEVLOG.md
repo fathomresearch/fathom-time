@@ -9,9 +9,21 @@ and whether it is live. Code-level detail lives in `CLAUDE.md` and the git histo
 - **Live:** https://fathom-time.netlify.app (moving to https://time.fathomresearch.ai). Running Stage 2 plus review fixes (`20ba36d`).
 - **Database:** migrations 001 to 007 run. Security test (`supabase/tests/rls_check.sql`): 35 checks.
 - **Built, not live yet:** Stage 3a (import matching). Netlify deploys are paused until credits reset on **2026-10-10**. Test on localhost (`npm run dev`) meanwhile.
-- **Next:** move hosting from Netlify to GitHub Pages (Part 1: app without a server), then Stage 3b (review and import).
+- **Next:** finish the GitHub Pages switch (run 008, GitHub setup, Pages settings, Supabase + Google addresses), then Stage 3b (review and import).
 
 ---
+
+## 2026-10-06: App runs without a server (ready for GitHub Pages)
+
+- The site is now plain files: every page loads its data in the browser from Supabase, and the database's security rules protect everything as before.
+- Jobs the server used to do moved into Supabase (migration 008): the first-sign-in setup (Director email list now in the database, time zone), automatic linking of former members, deactivating people (stops their timer), creating former members (no sign-in record needed now).
+- **Dropped:** the extra Supabase sign-in ban on deactivation (deactivated people are still blocked and signed out), the Settings "Setup check" panel, the Netlify settings file.
+- Pages with an ID now use `?id=` (e.g. `/team/person/?id=…`, `/team/project/?id=…`).
+- New automation `publish-site.yml`: every push builds the site and publishes it to the public repo `fathom-time-site` (GitHub Pages, `time.fathomresearch.ai`). Code, notes and backups stay private.
+- The website no longer contains or needs the Supabase secret key.
+- Security test: 40 checks.
+- **Database:** `008_no_server.sql` (not run yet).
+- **Live:** no. Needs migration 008, the GitHub setup (public repo, token, secrets) and Pages settings.
 
 ## 2026-10-06: Leaving Netlify; backups to Cloudflare
 

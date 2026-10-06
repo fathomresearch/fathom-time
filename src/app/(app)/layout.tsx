@@ -1,16 +1,13 @@
+"use client";
+
 import Sidebar from "@/components/Sidebar";
 import Toaster from "@/components/Toaster";
-import { requireProfile } from "@/lib/auth";
+import { SessionProvider, useSession } from "@/lib/session";
 import { initials } from "@/lib/people";
 import { isLead } from "@/lib/types";
 
-export default async function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const profile = await requireProfile();
-
+function Shell({ children }: { children: React.ReactNode }) {
+  const { profile } = useSession();
   return (
     <div className="min-h-full">
       <Sidebar
@@ -27,5 +24,17 @@ export default async function AppLayout({
       </main>
       <Toaster />
     </div>
+  );
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      fallback={
+        <div className="flex min-h-screen items-center justify-center text-sm text-charcoal/60">Loading…</div>
+      }
+    >
+      <Shell>{children}</Shell>
+    </SessionProvider>
   );
 }

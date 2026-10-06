@@ -156,7 +156,7 @@ function ProjectBlock({
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: project?.color ?? "#BBBCC0" }} />
             {project ? (
               <Link
-                href={`/team/projects/${project.id}`}
+                href={`/team/project/?id=${project.id}`}
                 className="truncate font-display font-semibold text-navy hover:underline"
               >
                 {project.name}
@@ -234,7 +234,7 @@ function BudgetBadge({
         </span>
       )}
       <Link
-        href={`/team/projects/${projectId}`}
+        href={`/team/project/?id=${projectId}`}
         className="whitespace-nowrap rounded-full border border-light bg-white px-2.5 py-0.5 font-display text-xs font-semibold text-navy hover:bg-lightest"
       >
         {has ? "Edit budget" : "Add budget"}

@@ -6,7 +6,7 @@ import { toast } from "@/components/Toaster";
 import { Avatar } from "@/components/team/bits";
 import FormerMembers from "@/components/team/FormerMembers";
 import type { TeamPerson } from "@/components/team/useTeamWeek";
-import { setActive, setRole } from "@/app/(app)/team/actions";
+import { setActive, setRole } from "@/lib/teamActions";
 import { displayName } from "@/lib/people";
 import { ROLE_LABELS, type Role } from "@/lib/types";
 

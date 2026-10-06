@@ -49,7 +49,7 @@ export default function TeamOverview({ viewer, initialTab = "person" }: { viewer
     <>
       <PageHeader title="Team Overview">
         {tab === "project" && (
-          <BudgetImport catalog={catalog} onImported={(id) => router.push(`/team/projects/${id}`)} />
+          <BudgetImport catalog={catalog} onImported={(id) => router.push(`/team/project/?id=${id}`)} />
         )}
         <Link
           href="/team/import"

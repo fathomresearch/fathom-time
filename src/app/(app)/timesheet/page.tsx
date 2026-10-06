@@ -1,13 +1,9 @@
+"use client";
+
 import Timesheet from "@/components/timesheet/Timesheet";
-import { requireProfile } from "@/lib/auth";
+import { useSession } from "@/lib/session";
 
-export default async function TimesheetPage() {
-  const profile = await requireProfile();
-
-  return (
-    <Timesheet
-      ownerId={profile.id}
-      viewer={{ id: profile.id, role: profile.role, timezone: profile.timezone }}
-    />
-  );
+export default function TimesheetPage() {
+  const { viewer } = useSession();
+  return <Timesheet ownerId={viewer.id} viewer={viewer} />;
 }

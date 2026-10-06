@@ -267,7 +267,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
   return (
     <>
       <Link
-        href="/team?tab=project"
+        href="/team/?tab=project"
         className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-navy hover:underline print:hidden"
       >
         <ChevronLeft size={16} /> By project
@@ -294,7 +294,7 @@ export default function BudgetView({ projectId, viewer }: { projectId: string; v
           <BudgetImport
             catalog={catalog}
             projectId={projectId}
-            onImported={(id) => (id === projectId ? budget.reload() : router.push(`/team/projects/${id}`))}
+            onImported={(id) => (id === projectId ? budget.reload() : router.push(`/team/project/?id=${id}`))}
           />
           <Popover
             open={exportOpen}

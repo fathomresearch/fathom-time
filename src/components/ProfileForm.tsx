@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
-import { updateProfile, type ProfileFormState } from "@/app/(app)/settings/actions";
+import { useState } from "react";
+import { sb } from "@/lib/supabase/browser";
+import { isValidTimezone } from "@/lib/time";
 
 const US_ZONES: { value: string; label: string }[] = [
   { value: "America/New_York", label: "Eastern (New York)" },
@@ -14,20 +15,35 @@ const US_ZONES: { value: string; label: string }[] = [
 ];
 
 export default function ProfileForm({
+  id,
   name,
   email,
   timezone,
-  allZones,
+  onSaved,
 }: {
+  id: string;
   name: string;
   email: string;
   timezone: string;
-  allZones: string[];
+  onSaved: () => void;
 }) {
-  const [state, action, pending] = useActionState<ProfileFormState, FormData>(
-    updateProfile,
-    null
-  );
+  const [state, setState] = useState<{ ok: boolean; message: string } | null>(null);
+  const [pending, setPending] = useState(false);
+  const allZones = Intl.supportedValuesOf("timeZone");
+
+  const action = async (formData: FormData) => {
+    const nextName = String(formData.get("name") ?? "").trim();
+    const nextZone = String(formData.get("timezone") ?? "");
+    if (!nextName) return setState({ ok: false, message: "Enter your name." });
+    if (nextName.length > 80) return setState({ ok: false, message: "Keep your name under 80 characters." });
+    if (!isValidTimezone(nextZone)) return setState({ ok: false, message: "Pick a time zone from the list." });
+    setPending(true);
+    const { error } = await sb().from("profiles").update({ name: nextName, timezone: nextZone }).eq("id", id);
+    setPending(false);
+    if (error) return setState({ ok: false, message: "Couldn't save. Try again." });
+    setState({ ok: true, message: "Saved." });
+    onSaved();
+  };
   const usValues = new Set(US_ZONES.map((z) => z.value));
   const otherZones = allZones.filter((z) => !usValues.has(z));
 

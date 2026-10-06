@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { ROLE_LABELS, type Role } from "@/lib/types";
+import { signOut } from "@/lib/session";
 import { footerNav, leadNav, mainNav, type NavItem } from "@/lib/nav";
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
@@ -109,16 +110,15 @@ export default function Sidebar({
             {ROLE_LABELS[user.role]}
           </p>
         </div>
-        <form action="/auth/signout" method="post">
-          <button
-            type="submit"
-            className="text-medium hover:text-white"
-            aria-label="Sign out"
-            title="Sign out"
-          >
-            <LogOut size={17} />
-          </button>
-        </form>
+        <button
+          type="button"
+          onClick={() => signOut()}
+          className="text-medium hover:text-white"
+          aria-label="Sign out"
+          title="Sign out"
+        >
+          <LogOut size={17} />
+        </button>
       </div>
     </aside>
   );

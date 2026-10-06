@@ -1,10 +1,12 @@
+"use client";
+
 import NoAccess from "@/components/NoAccess";
 import ImportView from "@/components/import/ImportView";
-import { requireProfile } from "@/lib/auth";
+import { useSession } from "@/lib/session";
 import { isLead } from "@/lib/types";
 
-export default async function ImportPage() {
-  const profile = await requireProfile();
-  if (!isLead(profile.role)) return <NoAccess />;
-  return <ImportView viewer={{ id: profile.id, role: profile.role, timezone: profile.timezone }} />;
+export default function ImportPage() {
+  const { viewer } = useSession();
+  if (!isLead(viewer.role)) return <NoAccess />;
+  return <ImportView viewer={viewer} />;
 }

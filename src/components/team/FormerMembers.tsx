@@ -6,7 +6,7 @@ import { sb } from "@/lib/supabase/browser";
 import { toast } from "@/components/Toaster";
 import { Avatar } from "@/components/team/bits";
 import type { TeamPerson } from "@/components/team/useTeamWeek";
-import { linkPerson, unlinkPerson } from "@/app/(app)/team/import/actions";
+import { linkPerson, unlinkPerson } from "@/lib/teamActions";
 import { fetchAll } from "@/lib/fetchAll";
 import { suggestPerson, type Alias } from "@/lib/importMatch";
 import { displayName } from "@/lib/people";

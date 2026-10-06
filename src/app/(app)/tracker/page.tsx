@@ -1,17 +1,15 @@
+"use client";
+
 import PageHeader from "@/components/PageHeader";
 import TimeTracker from "@/components/tracker/TimeTracker";
-import { requireProfile } from "@/lib/auth";
+import { useSession } from "@/lib/session";
 
-export default async function TrackerPage() {
-  const profile = await requireProfile();
-
+export default function TrackerPage() {
+  const { viewer } = useSession();
   return (
     <>
       <PageHeader title="Time Tracker" />
-      <TimeTracker
-        ownerId={profile.id}
-        viewer={{ id: profile.id, role: profile.role, timezone: profile.timezone }}
-      />
+      <TimeTracker ownerId={viewer.id} viewer={viewer} />
     </>
   );
 }

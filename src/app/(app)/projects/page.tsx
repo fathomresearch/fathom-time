@@ -1,10 +1,9 @@
+"use client";
+
 import ProjectsView from "@/components/projects/ProjectsView";
-import { requireProfile } from "@/lib/auth";
+import { useSession } from "@/lib/session";
 
-export default async function ProjectsPage() {
-  const profile = await requireProfile();
-
-  return (
-    <ProjectsView viewer={{ id: profile.id, role: profile.role, timezone: profile.timezone }} />
-  );
+export default function ProjectsPage() {
+  const { viewer } = useSession();
+  return <ProjectsView viewer={viewer} />;
 }

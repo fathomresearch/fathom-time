@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "@/components/Toaster";
-import { createFormerMembers, type FormerMemberInput } from "@/app/(app)/team/import/actions";
+import { createFormerMembers, type FormerMemberInput } from "@/lib/teamActions";
 import { suggestPerson, type Alias, type Suggestion } from "@/lib/importMatch";
 import type { ParseResult } from "@/lib/importParse";
 import { formatHoursShort } from "@/lib/time";

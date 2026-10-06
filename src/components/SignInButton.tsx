@@ -4,7 +4,7 @@ import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SignInButton({ domain }: { domain: string }) {
+export default function SignInButton() {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -16,11 +16,8 @@ export default function SignInButton({ domain }: { domain: string }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?tz=${encodeURIComponent(tz)}`,
-        queryParams: {
-          prompt: "select_account",
-          ...(domain ? { hd: domain } : {}),
-        },
+        redirectTo: `${window.location.origin}/auth/callback/?tz=${encodeURIComponent(tz)}`,
+        queryParams: { prompt: "select_account" },
       },
     });
     if (error) {

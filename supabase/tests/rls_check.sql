@@ -1,5 +1,5 @@
 -- =====================================================================
--- Fathom Time: security check (run after migrations 003 to 007)
+-- Fathom Time: security check (run after migrations 003 to 008)
 -- Creates temporary test people (IDs start with e0000000), signs in as
 -- each behind the scenes, and tries things they should and should not be
 -- able to do. Removes everything it created at the end; real data is
@@ -178,6 +178,26 @@ exception when others then
   insert into rls_results (check_name, pass, detail) values ('Analyst cannot link people', true, 'blocked: ' || sqlerrm);
 end $$;
 
+insert into rls_results (check_name, pass, detail)
+select 'Signing in again doesn''t change an analyst''s role', s.role = 'analyst' and s.active, 'role: ' || s.role
+from public.finish_sign_in('America/Chicago') s;
+
+do $$
+begin
+  perform public.create_former_member('RLS test former (analyst)', '[]');
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot create former members', false, 'created');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot create former members', true, 'blocked: ' || sqlerrm);
+end $$;
+
+do $$
+begin
+  perform public.set_person_active('e0000000-0000-4000-a000-000000000004', false);
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot deactivate through the app function', false, 'deactivated');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot deactivate through the app function', true, 'blocked: ' || sqlerrm);
+end $$;
+
 -- ---------------------------------------------------------------------
 -- As the Manager
 -- ---------------------------------------------------------------------
@@ -268,6 +288,29 @@ begin
   insert into rls_results (check_name, pass, detail) values ('Yellow line can''t be above the red line', false, 'saved 120 / 100');
 exception when others then
   insert into rls_results (check_name, pass, detail) values ('Yellow line can''t be above the red line', true, 'blocked: ' || sqlerrm);
+end $$;
+
+do $$
+declare new_id uuid;
+begin
+  new_id := public.create_former_member('RLS test former', '[{"source":"clockify","kind":"email","alias":"rls.former@example.com"}]');
+  insert into rls_results (check_name, pass, detail)
+  select 'Manager can create a former member (no sign-in, deactivated)',
+         not p.has_login and not p.active and p.role = 'analyst', 'created ' || p.name
+  from public.profiles p where p.id = new_id;
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Manager can create a former member (no sign-in, deactivated)', false, 'blocked: ' || sqlerrm);
+end $$;
+
+do $$
+declare a boolean;
+begin
+  perform public.set_person_active('e0000000-0000-4000-a000-000000000003', false);
+  select active into a from public.profiles where id = 'e0000000-0000-4000-a000-000000000003';
+  perform public.set_person_active('e0000000-0000-4000-a000-000000000003', true);
+  insert into rls_results (check_name, pass, detail) values ('Manager can deactivate and reactivate an analyst (app function)', not a, 'deactivated then reactivated');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Manager can deactivate and reactivate an analyst (app function)', false, 'blocked: ' || sqlerrm);
 end $$;
 
 do $$
@@ -397,6 +440,7 @@ end $$;
 -- ---------------------------------------------------------------------
 reset role;
 delete from public.time_entries where user_id::text like 'e0000000-0000-4000-a000-%';
+delete from public.profiles where name like 'RLS test former%';
 delete from public.projects where id = 'e0000000-0000-4000-a200-000000000001';
 delete from auth.users where id::text like 'e0000000-0000-4000-a000-%';
 
