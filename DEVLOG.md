@@ -9,9 +9,16 @@ and whether it is live. Code-level detail lives in `CLAUDE.md` and the git histo
 - **Live:** https://fathom-time.netlify.app (moving to https://time.fathomresearch.ai). Running Stage 2 plus review fixes (`20ba36d`).
 - **Database:** migrations 001 to 007 run. Security test (`supabase/tests/rls_check.sql`): 35 checks.
 - **Built, not live yet:** Stage 3a (import matching). Netlify deploys are paused until credits reset on **2026-10-10**. Test on localhost (`npm run dev`) meanwhile.
-- **Next:** Stage 3b (review and import Clockify / Jibble entries), then push 3a + 3b together.
+- **Next:** move hosting from Netlify to GitHub Pages (Part 1: app without a server), then Stage 3b (review and import).
 
 ---
+
+## 2026-10-06: Leaving Netlify; backups to Cloudflare
+
+- **Decision:** host on **GitHub Pages** (Option A: code repo stays private; a public repo `fathom-time-site` holds only the built website files) with **Supabase** for data and sign-in. Netlify will be removed. GitHub Pages serves plain files only, so the server parts move into Supabase (Part 1, not built yet).
+- **Backups** move from GitHub (90-day artifacts, which would be public if the repo ever were) to a private **Cloudflare R2** bucket `fathom-time-backups`, one copy per night, **kept forever**. Old GitHub copies are removed by the job.
+- **Keep-awake job** queries the database every Monday and Thursday so the Supabase free plan never pauses.
+- **Live:** not yet (needs the R2 secrets in GitHub and a push).
 
 ## 2026-10-06: Custom domain
 

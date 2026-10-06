@@ -1,8 +1,14 @@
 # Nightly database backup (Supabase free has no backups).
-# Based on https://supabase.com/docs/guides/deployment/ci/backups, but the
-# files are saved as a private artifact for 90 days instead of committed.
-# Needs the repo secret SUPABASE_DB_URL (Supabase > Connect > Session pooler).
-# Keep this repo private: the backup contains everyone's time entries.
+# Dump commands from https://supabase.com/docs/guides/deployment/ci/backups.
+# Each night's copy is saved to a private Cloudflare R2 bucket and kept
+# forever (backups/fathom-time-YYYY-MM-DD.tar.gz). Nothing is stored on GitHub.
+#
+# Repo secrets needed (Settings > Secrets and variables > Actions):
+#   SUPABASE_DB_URL       Supabase > Connect > Session pooler URI (with the password)
+#   R2_ACCOUNT_ID         Cloudflare account ID
+#   R2_ACCESS_KEY_ID      R2 API token (Object Read & Write on the bucket)
+#   R2_SECRET_ACCESS_KEY
+# Bucket name: fathom-time-backups (change R2_BUCKET below if it differs).
 
 name: Nightly backup
 
@@ -11,16 +17,30 @@ on:
     - cron: "0 8 * * *" # 08:00 UTC = 3 AM Chicago (2 AM in winter)
   workflow_dispatch: # "Run workflow" button in the Actions tab
 
+permissions:
+  actions: write # to remove the backup copies earlier versions of this job left on GitHub
+  contents: read
+
+env:
+  R2_BUCKET: fathom-time-backups
+
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Check the secret is set
+      - name: Check the secrets are set
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "Add the SUPABASE_DB_URL secret in Settings > Secrets and variables > Actions."
+          missing=""
+          for v in SUPABASE_DB_URL R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY; do
+            [ -z "${!v}" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "Add these secrets in Settings > Secrets and variables > Actions:$missing"
             exit 1
           fi
 
@@ -36,9 +56,36 @@ jobs:
           supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/roles.sql --role-only
           supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql
           supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --data-only --use-copy
+          tar -czf "fathom-time-$(date -u +%F).tar.gz" -C backup .
+          ls -l fathom-time-*.tar.gz
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          # Newer AWS CLI versions add checksums R2 may not accept; only send them when required.
+          AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+          AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+        run: |
+          file=$(ls fathom-time-*.tar.gz)
+          aws s3 cp "$file" "s3://$R2_BUCKET/backups/$file" \
+            --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
+          echo "Saved backups/$file to the $R2_BUCKET bucket."
+
+      # Older versions of this job kept copies on GitHub; remove them so no
+      # data stays here. Harmless once there are none left.
+      - name: Remove old backup copies from GitHub
+        uses: actions/github-script@v7
         with:
-          name: fathom-time-backup-${{ github.run_number }}
-          path: backup/
-          retention-days: 90
+          script: |
+            const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+            for (const a of artifacts.filter((x) => x.name.startsWith("fathom-time-backup"))) {
+              await github.rest.actions.deleteArtifact({ owner: context.repo.owner, repo: context.repo.repo, artifact_id: a.id });
+              core.info(`Removed ${a.name}`);
+            }

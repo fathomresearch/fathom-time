@@ -111,7 +111,7 @@ Teal `#00D6B3` accent (primary buttons use navy text on teal for contrast), Navy
 - Empty and loading states, error toasts, keyboard behavior.
 - Deploy to Netlify free from a private GitHub repo in the `fathomresearch` GitHub account. Add the Netlify URL to Supabase (Site URL + Redirect URLs) and Google OAuth (JavaScript origins).
 - Optional: nightly backup (Supabase free has no backups), "Email me a sign-in link" for non-Google users, flag timers running over 10 hours.
-- Built: error/not-found/loading pages, 10-hour timer warning, `.github/workflows/backup.yml` (nightly `supabase db dump`, saved as a 90-day artifact; needs the `SUPABASE_DB_URL` repo secret, session pooler URI). Email sign-in link skipped (decided not needed).
+- Built: error/not-found/loading pages, 10-hour timer warning, `.github/workflows/backup.yml` (nightly `supabase db dump`, tarred and uploaded to the private Cloudflare R2 bucket `fathom-time-backups`, kept forever; secrets `SUPABASE_DB_URL`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`), `.github/workflows/keep-awake.yml` (Mon/Thu query so the Supabase free plan never pauses). Email sign-in link skipped (decided not needed).
 
 ## Later (don't build now)
 Stage-based (contribution-based) pay: `budget_hours` on tasks, a `contributions` table (project_id, task_id, user_id, percent), efficiency = budgeted hours / actual hours.
