@@ -108,6 +108,10 @@ and whether it is live. Code-level detail lives in `CLAUDE.md` and the git histo
 
 ---
 
+## Ideas for later (not built)
+
+- **Projects grouped under clients** on the Projects page (client heading, "3 Projects", then each project with its task count), like Clockify. Requested 2026-10-06.
+
 ## How to add an entry
 
 Add new entries at the top (under "Current status"), and update "Current status".
