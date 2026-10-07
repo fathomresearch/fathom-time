@@ -6,10 +6,10 @@ and whether it is live. Code-level detail lives in `CLAUDE.md` and the git histo
 
 ## Current status (updated 2026-10-06)
 
-- **Live:** https://fathom-time.netlify.app (moving to https://time.fathomresearch.ai). Running Stage 2 plus review fixes (`20ba36d`).
-- **Database:** migrations 001 to 007 run. Security test (`supabase/tests/rls_check.sql`): 35 checks.
-- **Built, not live yet:** Stage 3a (import matching). Netlify deploys are paused until credits reset on **2026-10-10**. Test on localhost (`npm run dev`) meanwhile.
-- **Next:** finish the GitHub Pages switch (run 008, GitHub setup, Pages settings, Supabase + Google addresses), then Stage 3b (review and import).
+- **Live:** https://time.fathomresearch.ai, served by **GitHub Pages** from the public repo `fathomresearch/fathom-time`; every push to `main` publishes (free, effectively unlimited). Data and sign-in: **Supabase**. Backups: nightly to Cloudflare R2 (`fathom-time-backups`, kept forever). Keep-awake job Mon/Thu.
+- **Old address** https://fathom-time.netlify.app still runs the Oct 2 version against the same database; to be deleted when the product is finished (builds can be stopped in Netlify meanwhile).
+- **Database:** migrations 001 to 008 run. Security test (`supabase/tests/rls_check.sql`): 40 checks.
+- **Next:** Stage 3b (review and import Clockify / Jibble entries).
 
 ---
 
@@ -23,8 +23,8 @@ and whether it is live. Code-level detail lives in `CLAUDE.md` and the git histo
 - **Decision (changed):** publish straight from `fathom-time` by making that repo **public**, instead of a separate public `fathom-time-site` repo. Safe because backups now live in Cloudflare R2; the old GitHub backup copies are removed before the repo goes public. Code and notes become visible; no secrets are in the repo.
 - The website no longer contains or needs the Supabase secret key.
 - Security test: 40 checks.
-- **Database:** `008_no_server.sql` (not run yet).
-- **Live:** no. Needs migration 008, secrets, the old backups removed, the repo made public, and Pages settings.
+- **Database:** `008_no_server.sql` (run).
+- **Live:** yes, at https://time.fathomresearch.ai since 2026-10-06 (repo made public after old GitHub backups were removed; Pages source: GitHub Actions; HTTPS enforced; Supabase and Google allow the new address).
 
 ## 2026-10-06: Leaving Netlify; backups to Cloudflare
 
