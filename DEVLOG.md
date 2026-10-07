@@ -19,11 +19,12 @@ and whether it is live. Code-level detail lives in `CLAUDE.md` and the git histo
 - Jobs the server used to do moved into Supabase (migration 008): the first-sign-in setup (Director email list now in the database, time zone), automatic linking of former members, deactivating people (stops their timer), creating former members (no sign-in record needed now).
 - **Dropped:** the extra Supabase sign-in ban on deactivation (deactivated people are still blocked and signed out), the Settings "Setup check" panel, the Netlify settings file.
 - Pages with an ID now use `?id=` (e.g. `/team/person/?id=…`, `/team/project/?id=…`).
-- New automation `publish-site.yml`: every push builds the site and publishes it to the public repo `fathom-time-site` (GitHub Pages, `time.fathomresearch.ai`). Code, notes and backups stay private.
+- New automation `publish-site.yml`: every push builds the site and publishes it with GitHub Pages (`time.fathomresearch.ai`).
+- **Decision (changed):** publish straight from `fathom-time` by making that repo **public**, instead of a separate public `fathom-time-site` repo. Safe because backups now live in Cloudflare R2; the old GitHub backup copies are removed before the repo goes public. Code and notes become visible; no secrets are in the repo.
 - The website no longer contains or needs the Supabase secret key.
 - Security test: 40 checks.
 - **Database:** `008_no_server.sql` (not run yet).
-- **Live:** no. Needs migration 008, the GitHub setup (public repo, token, secrets) and Pages settings.
+- **Live:** no. Needs migration 008, secrets, the old backups removed, the repo made public, and Pages settings.
 
 ## 2026-10-06: Leaving Netlify; backups to Cloudflare
 

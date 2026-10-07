@@ -1,11 +1,11 @@
-# Builds the website as plain files and publishes them to the public repo
-# fathomresearch/fathom-time-site, which GitHub Pages serves at
-# https://time.fathomresearch.ai. This code repo stays private.
+# Builds the website as plain files and publishes them with GitHub Pages at
+# https://time.fathomresearch.ai (custom domain set in Settings > Pages;
+# GoDaddy CNAME time -> fathomresearch.github.io).
 #
 # Repo secrets needed (Settings > Secrets and variables > Actions):
-#   SITE_DEPLOY_TOKEN              fine-grained token, Contents: read and write on fathom-time-site
 #   NEXT_PUBLIC_SUPABASE_URL       same as .env.local
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY  same as .env.local (the publishable key, not the secret key)
+# Settings > Pages > Source must be "GitHub Actions".
 
 name: Publish site
 
@@ -21,23 +21,24 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: publish-site
+  group: pages
   cancel-in-progress: true
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Check the secrets are set
         env:
-          SITE_DEPLOY_TOKEN: ${{ secrets.SITE_DEPLOY_TOKEN }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           missing=""
-          for v in SITE_DEPLOY_TOKEN NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY; do
+          for v in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY; do
             [ -z "${!v}" ] && missing="$missing $v"
           done
           if [ -n "$missing" ]; then
@@ -58,17 +59,20 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-        run: npm run build
+        run: |
+          npm run build
+          touch out/.nojekyll # serve folders that start with "_" (Next.js puts its files in _next)
 
-      - name: Publish to fathom-time-site
-        uses: peaceiris/actions-gh-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
-          personal_token: ${{ secrets.SITE_DEPLOY_TOKEN }}
-          external_repository: fathomresearch/fathom-time-site
-          publish_branch: main
-          publish_dir: ./out
-          cname: time.fathomresearch.ai
-          force_orphan: true # keep only the latest version, no history
-          user_name: "github-actions[bot]"
-          user_email: "github-actions[bot]@users.noreply.github.com"
-          full_commit_message: "Publish ${{ github.sha }}"
+          path: ./out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
