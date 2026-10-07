@@ -7,13 +7,16 @@ import PageHeader from "@/components/PageHeader";
 import { toast } from "@/components/Toaster";
 import PeopleStep from "@/components/import/PeopleStep";
 import NamesStep from "@/components/import/NamesStep";
+import ReviewStep from "@/components/import/ReviewStep";
+import ImportHistory from "@/components/import/ImportHistory";
+import ImportTools from "@/components/import/ImportTools";
 import { useImportData } from "@/components/import/useImportData";
 import type { Viewer } from "@/components/tracker/TimeTracker";
 import { readTimeExport, type ParseResult } from "@/lib/importParse";
 import { useCatalog } from "@/lib/useCatalog";
 import { formatHoursShort, shortDate, parseKey } from "@/lib/time";
 
-type Step = "people" | "names" | "done";
+type Step = "people" | "names" | "review" | "done";
 const STEPS: { id: Step | "file" | "review"; label: string }[] = [
   { id: "file", label: "File" },
   { id: "people", label: "People" },
@@ -35,6 +38,7 @@ export default function ImportView({ viewer }: { viewer: Viewer }) {
   const [step, setStep] = useState<Step>("people");
   const [reading, setReading] = useState(false);
   const [showProblems, setShowProblems] = useState(false);
+  const [historyKey, setHistoryKey] = useState(0);
 
   const onFile = async (file: File) => {
     setReading(true);
@@ -54,7 +58,7 @@ export default function ImportView({ viewer }: { viewer: Viewer }) {
 
   const ready = catalog.loaded && data.loaded;
   const current = parsed ? step : "file";
-  const stepIndex = STEPS.findIndex((s) => s.id === (current === "done" ? "review" : current));
+  const stepIndex = current === "done" ? STEPS.length : STEPS.findIndex((s) => s.id === current);
 
   const summary =
     parsed &&
@@ -122,6 +126,7 @@ export default function ImportView({ viewer }: { viewer: Viewer }) {
           <p className="mx-auto mt-2 max-w-xl text-sm text-charcoal">
             Clockify: Reports → Detailed → Export → CSV. Jibble: the Raw Time Entries export. Clockify times are read as
             Central time (Chicago); Jibble uses each row&apos;s own time zone. Nothing is imported until the last step.
+            Before the first real import, delete the practice entries (Settings and clean-up, below).
           </p>
         </div>
       ) : (
@@ -182,37 +187,60 @@ export default function ImportView({ viewer }: { viewer: Viewer }) {
                 parsed={parsed}
                 catalog={catalog}
                 data={data}
-                onDone={() => setStep("done")}
+                onDone={() => setStep("review")}
+              />
+            ) : step === "review" ? (
+              <ReviewStep
+                key={parsed.fileName + parsed.entries.length}
+                parsed={parsed}
+                catalog={catalog}
+                data={data}
+                viewerTz={viewer.timezone}
+                onBackToMatching={() => setStep("people")}
+                onImported={() => {
+                  setStep("done");
+                  setHistoryKey((k) => k + 1);
+                }}
               />
             ) : (
               <div className="px-6 py-10 text-center">
                 <Check size={24} className="mx-auto text-teal" />
-                <p className="mt-2 font-display text-base font-semibold text-navy">
-                  {parsed.entries.length.toLocaleString("en-US")} entries matched and ready
-                </p>
+                <p className="mt-2 font-display text-base font-semibold text-navy">Import finished</p>
                 <p className="mx-auto mt-1 max-w-lg text-sm text-charcoal">
-                  People, clients, projects and tasks are matched and remembered. Reviewing duplicates and importing the
-                  entries is the next step (coming in Stage 3b). You can match another file now.
+                  The entries are in Fathom Time. It&apos;s listed in the import history below, where you can undo it.
+                  Import another file (for example the next Jibble month) whenever you like.
                 </p>
                 <div className="mt-4 flex justify-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setStep("people")}
+                    onClick={() => setStep("review")}
                     className="h-9 rounded-md border border-light bg-white px-3 text-sm font-medium text-navy hover:bg-lightest"
                   >
-                    Review the matches again
+                    Check this file again
                   </button>
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
                     className="h-9 rounded-md bg-teal px-4 font-display text-sm font-semibold text-navy"
                   >
-                    Match another file
+                    Import another file
                   </button>
                 </div>
               </div>
             )}
           </div>
+        </>
+      )}
+
+      {ready && (
+        <>
+          <ImportTools role={viewer.role} tz={viewer.timezone} onChanged={() => setHistoryKey((k) => k + 1)} />
+          <ImportHistory
+            people={data.people}
+            tz={viewer.timezone}
+            refreshKey={historyKey}
+            onChanged={() => setHistoryKey((k) => k + 1)}
+          />
         </>
       )}
     </>

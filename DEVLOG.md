@@ -9,9 +9,22 @@ and whether it is live. Code-level detail lives in `CLAUDE.md` and the git histo
 - **Live:** https://time.fathomresearch.ai, served by **GitHub Pages** from the public repo `fathomresearch/fathom-time`; every push to `main` publishes (free, effectively unlimited). Data and sign-in: **Supabase**. Backups: nightly to Cloudflare R2 (`fathom-time-backups`, kept forever). Keep-awake job Mon/Thu.
 - **Old address** https://fathom-time.netlify.app still runs the Oct 2 version against the same database; to be deleted when the product is finished (builds can be stopped in Netlify meanwhile).
 - **Database:** migrations 001 to 008 run. Security test (`supabase/tests/rls_check.sql`): 40 checks.
-- **Next:** Stage 3b (review and import Clockify / Jibble entries).
+- **Next:** run migration 009, push, then do the real import (practice clean-up first). Then contribution-based pay (Later).
 
 ---
+
+## 2026-10-06: Stage 3b, review and import
+
+- The Import page now finishes the job: after matching, a **review** shows what the file would change, grouped as likely duplicates, overlaps, entries over 12 hours, and (on re-imports) entries changed or removed in Jibble. Each row has a choice; "Accept all suggestions" restores the defaults. Then **Import** (with progress).
+- **Re-importing is normal:** export a Jibble month again (e.g. September after edits, or October) and only the differences are offered. Entries you skipped before aren't asked again.
+- **Duplicates are also checked against time typed into Fathom Time,** so a person logging in both apps during the switch doesn't get counted twice.
+- **Import history** with **Undo** (removes what an import added and restores what it removed).
+- **Settings and clean-up:** Jibble cut-over date (Jibble rows on or after it are refused); delete practice entries; remove unused demo projects (Director).
+- Tested on the real files: Jibble August against Clockify 2026 gives 18 likely duplicates and 4 overlaps; Tom's Aug 10 (60h under one date) is flagged; Marcel's 22.5h / 24h July entries are caught; re-imports pick up a changed and a removed entry correctly.
+- **Defaults:** duplicates within 5 minutes; Fathom Time beats Clockify beats Jibble; over 12h skipped; changes and removals applied; undo anytime.
+- **Database:** `009_import_review.sql` (not run yet). Security test: 45 checks.
+- **Live:** after migration 009 and a push.
+
 
 ## 2026-10-06: App runs without a server (ready for GitHub Pages)
 

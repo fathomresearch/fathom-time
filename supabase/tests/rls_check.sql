@@ -1,5 +1,5 @@
 -- =====================================================================
--- Fathom Time: security check (run after migrations 003 to 008)
+-- Fathom Time: security check (run after migrations 003 to 009)
 -- Creates temporary test people (IDs start with e0000000), signs in as
 -- each behind the scenes, and tries things they should and should not be
 -- able to do. Removes everything it created at the end; real data is
@@ -198,6 +198,23 @@ exception when others then
   insert into rls_results (check_name, pass, detail) values ('Analyst cannot deactivate through the app function', true, 'blocked: ' || sqlerrm);
 end $$;
 
+do $$
+begin
+  perform public.set_jibble_cutover('2000-01-01');
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot change the Jibble cut-over date', false, 'changed');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot change the Jibble cut-over date', true, 'blocked: ' || sqlerrm);
+end $$;
+
+do $$
+begin
+  perform public.undo_import(gen_random_uuid());
+  insert into rls_results (check_name, pass, detail) values ('Analyst cannot undo imports', false, 'allowed');
+exception when others then
+  insert into rls_results (check_name, pass, detail)
+  values ('Analyst cannot undo imports', sqlerrm like 'Only the Director and Managers%', 'blocked: ' || sqlerrm);
+end $$;
+
 -- ---------------------------------------------------------------------
 -- As the Manager
 -- ---------------------------------------------------------------------
@@ -315,6 +332,22 @@ end $$;
 
 do $$
 begin
+  perform public.get_jibble_cutover();
+  insert into rls_results (check_name, pass, detail) values ('Manager can read the Jibble cut-over date', true, 'read');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Manager can read the Jibble cut-over date', false, 'blocked: ' || sqlerrm);
+end $$;
+
+do $$
+begin
+  perform public.delete_practice_entries('2000-01-01');
+  insert into rls_results (check_name, pass, detail) values ('Manager cannot delete practice entries (Director only)', false, 'allowed');
+exception when others then
+  insert into rls_results (check_name, pass, detail) values ('Manager cannot delete practice entries (Director only)', true, 'blocked: ' || sqlerrm);
+end $$;
+
+do $$
+begin
   perform public.link_person('e0000000-0000-4000-a000-000000000005', 'e0000000-0000-4000-a000-000000000003', false);
   insert into rls_results (check_name, pass, detail) values ('Manager cannot link people (Director only)', false, 'link was allowed');
 exception when others then
@@ -389,6 +422,9 @@ begin
 exception when others then
   insert into rls_results (check_name, pass, detail) values ('Director can rename someone', false, 'blocked: ' || sqlerrm);
 end $$;
+
+insert into rls_results (check_name, pass, detail)
+select 'Director can count practice entries', public.count_practice_entries('2000-01-01') is not null, 'counted';
 
 -- Back to the Analyst: the test task now has a budget (set by the Manager).
 reset role;
