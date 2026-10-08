@@ -13,6 +13,14 @@ and whether it is live. Code-level detail lives in `CLAUDE.md` and the git histo
 
 ---
 
+## 2026-10-07: Fix imported data by hand
+
+- **Import review:** a new **All entries** tab lists every entry in the file that's still to be decided. Filter by person, project, group or text (e.g. "Personal Project"), tick entries (or all that match), then **move to a project/task**, **set billable**, or **skip**. Any entry can be **edited**: hours, project/task, description, billable. Corrected rows say "corrected", and editing one in a duplicate, overlap or over-12h row picks the corrected version ("Use corrected", "Import corrected").
+- **Edit entries page** (Team Overview → Edit entries, Directors and Managers): the same kind of filters across everything already in Fathom Time (date range, person, client, project, source, "project but no task"). Bulk move, billable, or delete (asks first, with the count). Moving sets billable to the new project's default.
+- Corrections keep the entry's start time and import key, so re-importing the same Jibble month treats them as already imported and keeps your fixes.
+- **Database:** no change.
+- **Live:** after a push.
+
 ## 2026-10-06: Stage 3b, review and import
 
 - The Import page now finishes the job: after matching, a **review** shows what the file would change, grouped as likely duplicates, overlaps, entries over 12 hours, and (on re-imports) entries changed or removed in Jibble. Each row has a choice; "Accept all suggestions" restores the defaults. Then **Import** (with progress).

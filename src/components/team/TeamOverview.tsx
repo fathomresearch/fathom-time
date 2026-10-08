@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Upload } from "lucide-react";
+import { ListChecks, Upload } from "lucide-react";
 import BudgetImport from "@/components/budget/BudgetImport";
 import PageHeader from "@/components/PageHeader";
 import WeekNav from "@/components/WeekNav";
@@ -56,6 +56,12 @@ export default function TeamOverview({ viewer, initialTab = "person" }: { viewer
           className="flex h-9 items-center gap-1.5 rounded-md border border-light bg-white px-3 text-sm font-medium text-navy hover:bg-lightest"
         >
           <Upload size={15} /> Import time
+        </Link>
+        <Link
+          href="/team/entries"
+          className="flex h-9 items-center gap-1.5 rounded-md border border-light bg-white px-3 text-sm font-medium text-navy hover:bg-lightest"
+        >
+          <ListChecks size={15} /> Edit entries
         </Link>
         <ExportCsv catalog={catalog} tz={tz} weekKey={weekKey} note="Everyone's time." />
         {tab === "person" && <WeekNav weekKey={weekKey} todayKey={todayKey} onChange={setWeekKey} />}

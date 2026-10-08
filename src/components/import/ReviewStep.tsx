@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { TriangleAlert } from "lucide-react";
+import { ChevronDown, ChevronRight, TriangleAlert } from "lucide-react";
 import { sb } from "@/lib/supabase/browser";
 import { toast } from "@/components/Toaster";
+import EntryEditor from "@/components/EntryEditor";
+import ReviewAll from "@/components/import/ReviewAll";
 import type { useImportData } from "@/components/import/useImportData";
 import { fetchAll } from "@/lib/fetchAll";
 import type { ParseResult, RawEntry } from "@/lib/importParse";
@@ -12,9 +14,14 @@ import {
   applyPlan,
   buildPlan,
   compareRange,
+  hasChanges,
+  preferCorrected,
   resolveEntries,
   skippedKeys,
+  withEdit,
   type Choice,
+  type Edits,
+  type EntryEdit,
   type ExistingEntry,
   type Incoming,
   type Plan,
@@ -23,7 +30,7 @@ import type { Catalog } from "@/lib/useCatalog";
 import { displayName } from "@/lib/people";
 import { dayKey, formatHoursShort, formatTime, parseKey, shortDate, startOfDay } from "@/lib/time";
 
-type Tab = "duplicates" | "overlaps" | "long" | "changed" | "removed";
+type Tab = "all" | "duplicates" | "overlaps" | "long" | "changed" | "removed";
 const SOURCE_LABEL = { clockify: "Clockify", jibble: "Jibble" } as const;
 const CHUNK = 500;
 
@@ -57,6 +64,8 @@ export default function ReviewStep({
   const [unmatched, setUnmatched] = useState<{ people: string[]; projects: string[]; tasks: string[] } | null>(null);
   const [tab, setTab] = useState<Tab>("duplicates");
   const [progress, setProgress] = useState<string | null>(null);
+  const [edits, setEdits] = useState<Edits>({});
+  const [openOverlaps, setOpenOverlaps] = useState<Set<string>>(new Set());
 
   const nameOf = (id: string) => displayName(data.people.find((p) => p.id === id));
   const projectLabel = (projectId: string | null, taskId: string | null) => {
@@ -130,17 +139,17 @@ export default function ReviewStep({
       });
       setPlan(built);
       setDefaults(structuredClone(built));
-      const firstTab = (["duplicates", "overlaps", "long", "changed", "removed"] as Tab[]).find(
+      const firstTab = (["duplicates", "overlaps", "long", "changed", "removed"] as const).find(
         (t) => (built[t] as unknown[]).length
       );
-      if (firstTab) setTab(firstTab);
+      setTab(firstTab ?? "all");
     })();
     return () => {
       cancelled = true;
     };
   }, [parsed, src, data.aliases, data.mappings, data.people, catalog.taskById]);
 
-  const result = useMemo(() => (plan ? applyPlan(plan) : null), [plan]);
+  const result = useMemo(() => (plan ? applyPlan(plan, edits) : null), [plan, edits]);
 
   if (unmatched) {
     return (
@@ -170,7 +179,48 @@ export default function ReviewStep({
   }
   if (!plan || !result) return <p className="px-4 py-10 text-center text-sm text-charcoal/60">Comparing…</p>;
 
-  const set = <K extends Tab>(key: K, id: string, patch: Partial<Plan[K][number]>) =>
+  const billableOf = (projectId: string | null, billable: boolean | null) =>
+    billable ?? (projectId ? (catalog.projectById.get(projectId)?.billable_default ?? false) : false);
+
+  /** Corrections, kept until the import. A hand-corrected entry is chosen in its group. */
+  const edit = (keys: string[], patch: EntryEdit, single = false) => {
+    setEdits((all) => {
+      const next = { ...all };
+      for (const k of keys) next[k] = { ...next[k], ...patch };
+      return next;
+    });
+    if (single && !("skip" in patch)) setPlan((p) => (p ? preferCorrected(p, new Set(keys)) : p));
+  };
+  const resetEdit = (key: string) =>
+    setEdits((all) => {
+      const next = { ...all };
+      delete next[key];
+      return next;
+    });
+  const now = (e: Incoming) => withEdit(e, edits[e.key]);
+  const isEdited = (e: Incoming) => hasChanges(edits[e.key]);
+  const editorFor = (e: Incoming) => {
+    const cur = now(e);
+    return (
+      <EntryEditor
+        catalog={catalog}
+        label={isEdited(e) ? "Edited" : "Edit"}
+        value={{
+          seconds: cur.seconds,
+          projectId: cur.projectId,
+          taskId: cur.taskId,
+          description: cur.description,
+          billable: billableOf(cur.projectId, cur.billable),
+        }}
+        onSave={(c) => edit([e.key], c, true)}
+        onReset={edits[e.key] ? () => resetEdit(e.key) : undefined}
+      />
+    );
+  };
+  const fileLabel = `${SOURCE_LABEL[src]} (this file)`;
+  const incomingLabel = (e: Incoming) => (isEdited(e) ? `${SOURCE_LABEL[src]}, corrected` : fileLabel);
+
+  const set = <K extends Exclude<Tab, "all">>(key: K, id: string, patch: Partial<Plan[K][number]>) =>
     setPlan((p) =>
       p ? { ...p, [key]: (p[key] as { id: string }[]).map((x) => (x.id === id ? { ...x, ...patch } : x)) } : p
     );
@@ -187,7 +237,12 @@ export default function ReviewStep({
           source: src,
           file_name: parsed.fileName,
           entry_count: add.length,
-          summary: { added: add.length, removed: remove.length, skipped_keys: skippedKeys(plan) },
+          summary: {
+            added: add.length,
+            removed: remove.length,
+            edited: add.filter((e) => hasChanges(edits[e.key])).length,
+            skipped_keys: skippedKeys(plan, edits),
+          },
         })
         .select("id")
         .single();
@@ -223,8 +278,7 @@ export default function ReviewStep({
           project_id: e.projectId,
           task_id: e.taskId,
           description: e.description,
-          billable:
-            e.billable ?? (e.projectId ? (catalog.projectById.get(e.projectId)?.billable_default ?? false) : false),
+          billable: billableOf(e.projectId, e.billable),
           start_at: e.startAt,
           end_at: e.endAt,
           tz: e.tz,
@@ -245,6 +299,10 @@ export default function ReviewStep({
     }
   };
 
+  const reviewCount = plan.fresh.length + plan.duplicates.length + plan.long.length + plan.changed.length +
+    plan.overlaps.reduce((s, o) => s + o.incoming.length, 0);
+  const editedCount = Object.values(edits).filter((x) => hasChanges(x)).length;
+  const skippedCount = Object.values(edits).filter((x) => x.skip).length;
   const tabs: { id: Tab; label: string; count: number }[] = [
     { id: "duplicates", label: "Likely duplicates", count: plan.duplicates.length },
     { id: "overlaps", label: "Overlaps", count: plan.overlaps.length },
@@ -253,6 +311,7 @@ export default function ReviewStep({
     { id: "removed", label: `Removed in ${SOURCE_LABEL[src]}`, count: plan.removed.length },
   ];
   const toReview = tabs.reduce((s, t) => s + t.count, 0);
+  tabs.push({ id: "all", label: "All entries", count: reviewCount });
   const existingLabel = (s: string | null) => (s ? `${SOURCE_LABEL[s as "clockify"]} (imported)` : "Fathom Time");
   const when = (e: { startAt?: string; start_at?: string; tz?: string }) =>
     formatTime(new Date((e.startAt ?? e.start_at)!), e.tz ?? viewerTz);
@@ -312,7 +371,16 @@ export default function ReviewStep({
         {toReview > 0 && (
           <button
             type="button"
-            onClick={() => defaults && setPlan(structuredClone(defaults))}
+            onClick={() =>
+              defaults &&
+              setPlan(
+                preferCorrected(
+                  structuredClone(defaults),
+                  new Set(Object.keys(edits).filter((k) => hasChanges(edits[k])))
+                )
+              )
+            }
+            title="Your corrections are kept"
             className="shrink-0 text-sm font-semibold text-teal hover:underline"
           >
             Accept all suggestions
@@ -321,14 +389,28 @@ export default function ReviewStep({
       </div>
 
       <div className="px-5 py-3">
+        {tab === "all" && (
+          <ReviewAll
+            plan={plan}
+            edits={edits}
+            catalog={catalog}
+            nameOf={nameOf}
+            billableOf={billableOf}
+            onEdit={edit}
+            onReset={resetEdit}
+          />
+        )}
+
         {tab === "duplicates" &&
           (plan.duplicates.length ? (
             plan.duplicates.map((d) => (
               <Row key={d.id} who={nameOf(d.incoming.userId)} date={d.incoming.date}>
                 <Side
-                  label={`${SOURCE_LABEL[src]} (this file)`}
-                  hours={d.incoming.seconds}
-                  detail={`${projectLabel(d.incoming.projectId, d.incoming.taskId)}${d.incoming.start ? ` · ${when(d.incoming)}` : ""}`}
+                  label={incomingLabel(d.incoming)}
+                  hours={now(d.incoming).seconds}
+                  was={isEdited(d.incoming) ? d.incoming.seconds : undefined}
+                  detail={`${projectLabel(now(d.incoming).projectId, now(d.incoming).taskId)}${d.incoming.start ? ` · ${when(d.incoming)}` : ""}`}
+                  action={editorFor(d.incoming)}
                 />
                 <Side
                   label={existingLabel(d.existing.source)}
@@ -339,7 +421,7 @@ export default function ReviewStep({
                   value={d.choice}
                   options={[
                     ["existing", `Keep ${existingLabel(d.existing.source).replace(" (imported)", "")}`],
-                    ["new", `Use ${SOURCE_LABEL[src]}`],
+                    ["new", isEdited(d.incoming) ? "Use corrected" : `Use ${SOURCE_LABEL[src]}`],
                     ["both", "Keep both"],
                   ]}
                   onChange={(v) => set("duplicates", d.id, { choice: v as Choice })}
@@ -353,39 +435,98 @@ export default function ReviewStep({
         {tab === "overlaps" &&
           (plan.overlaps.length ? (
             plan.overlaps.map((o) => {
-              const mine = o.incoming.reduce((s, x) => s + x.seconds, 0);
+              const mine = o.incoming.reduce((s, x) => s + (edits[x.key]?.skip ? 0 : now(x).seconds), 0);
+              const corrected = o.incoming.some((x) => edits[x.key]);
+              const expanded = openOverlaps.has(o.id);
               const theirs = o.existing.reduce((s, x) => s + secondsOf(x), 0);
               const big = Math.abs(mine - theirs) >= BIG_DIFFERENCE_SECONDS;
               const label = existingLabel(o.existing[0]?.source ?? null);
               return (
-                <Row key={o.id} who={nameOf(o.userId)} date={o.date}>
-                  <Side
-                    label={`${SOURCE_LABEL[src]} (this file)`}
-                    hours={mine}
-                    detail={`${o.incoming.length} ${o.incoming.length === 1 ? "entry" : "entries"}`}
-                  />
-                  <Side
-                    label={label}
-                    hours={theirs}
-                    detail={`${o.existing.length} ${o.existing.length === 1 ? "entry" : "entries"}`}
-                  />
-                  <div className="grid gap-1">
-                    {big && (
-                      <span className="flex items-center gap-1 text-xs font-semibold text-[#8A5D00]">
-                        <TriangleAlert size={12} /> Very different totals: check before choosing
-                      </span>
-                    )}
-                    <Choices
-                      value={o.choice}
-                      options={[
-                        ["existing", `Keep ${label.replace(" (imported)", "")}`],
-                        ["new", `Use ${SOURCE_LABEL[src]}`],
-                        ["both", "Keep both"],
-                      ]}
-                      onChange={(v) => set("overlaps", o.id, { choice: v as Choice })}
+                <div key={o.id} className="border-b border-light last:border-0">
+                  <Row who={nameOf(o.userId)} date={o.date} bordered={false}>
+                    <Side
+                      label={corrected ? `${SOURCE_LABEL[src]}, corrected` : fileLabel}
+                      hours={mine}
+                      detail={`${o.incoming.length} ${o.incoming.length === 1 ? "entry" : "entries"}`}
+                      action={
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenOverlaps((s) => {
+                              const n = new Set(s);
+                              if (n.has(o.id)) n.delete(o.id);
+                              else n.add(o.id);
+                              return n;
+                            })
+                          }
+                          className="inline-flex items-center gap-0.5 rounded-md px-2 py-1 text-xs text-charcoal/70 hover:bg-lightest hover:text-navy"
+                        >
+                          {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />} See and edit entries
+                        </button>
+                      }
                     />
-                  </div>
-                </Row>
+                    <Side
+                      label={label}
+                      hours={theirs}
+                      detail={`${o.existing.length} ${o.existing.length === 1 ? "entry" : "entries"}`}
+                    />
+                    <div className="grid gap-1">
+                      {big && (
+                        <span className="flex items-center gap-1 text-xs font-semibold text-[#8A5D00]">
+                          <TriangleAlert size={12} /> Very different totals: check before choosing
+                        </span>
+                      )}
+                      <Choices
+                        value={o.choice}
+                        options={[
+                          ["existing", `Keep ${label.replace(" (imported)", "")}`],
+                          ["new", corrected ? "Use corrected" : `Use ${SOURCE_LABEL[src]}`],
+                          ["both", "Keep both"],
+                        ]}
+                        onChange={(v) => set("overlaps", o.id, { choice: v as Choice })}
+                      />
+                    </div>
+                  </Row>
+                  {expanded && (
+                    <div className="mb-2.5 ml-[182px] grid grid-cols-2 gap-x-6 rounded-md bg-canvas px-3 py-2 text-xs">
+                      <ul className="grid gap-1">
+                        {o.incoming.map((x) => {
+                          const cur = now(x);
+                          const skipped = !!edits[x.key]?.skip;
+                          return (
+                            <li key={x.key} className={`flex items-center justify-between gap-2 ${skipped ? "opacity-50" : ""}`}>
+                              <span className="min-w-0 truncate">
+                                <span className="tabular font-semibold text-navy">{formatHoursShort(cur.seconds)}</span>{" "}
+                                {x.start ? `${when(x)} · ` : ""}
+                                {projectLabel(cur.projectId, cur.taskId)}
+                                {cur.description ? ` · ${cur.description}` : ""}
+                              </span>
+                              <span className="flex shrink-0 items-center">
+                                {editorFor(x)}
+                                <button
+                                  type="button"
+                                  onClick={() => edit([x.key], { skip: !skipped })}
+                                  className="rounded-md px-1.5 py-1 text-xs text-charcoal/70 hover:bg-white hover:text-navy"
+                                >
+                                  {skipped ? "Include" : "Skip"}
+                                </button>
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <ul className="grid content-start gap-1">
+                        {o.existing.map((x) => (
+                          <li key={x.id} className="truncate py-1">
+                            <span className="tabular font-semibold text-navy">{formatHoursShort(secondsOf(x))}</span>{" "}
+                            {when(x)} · {projectLabel(x.project_id, x.task_id)}
+                            {x.description ? ` · ${x.description}` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               );
             })
           ) : (
@@ -397,16 +538,18 @@ export default function ReviewStep({
             plan.long.map((l) => (
               <Row key={l.id} who={nameOf(l.entry.userId)} date={l.entry.date}>
                 <Side
-                  label={`${SOURCE_LABEL[src]} (this file)`}
-                  hours={l.entry.seconds}
-                  detail={projectLabel(l.entry.projectId, l.entry.taskId)}
+                  label={incomingLabel(l.entry)}
+                  hours={now(l.entry).seconds}
+                  was={isEdited(l.entry) ? l.entry.seconds : undefined}
+                  detail={projectLabel(now(l.entry).projectId, now(l.entry).taskId)}
+                  action={editorFor(l.entry)}
                 />
                 <span />
                 <Choices
                   value={l.take ? "take" : "skip"}
                   options={[
                     ["skip", "Skip"],
-                    ["take", "Import anyway"],
+                    ["take", isEdited(l.entry) ? "Import corrected" : "Import anyway"],
                   ]}
                   onChange={(v) => set("long", l.id, { take: v === "take" })}
                 />
@@ -422,9 +565,11 @@ export default function ReviewStep({
               <Row key={c.id} who={nameOf(c.incoming.userId)} date={c.incoming.date}>
                 <Side label="Before" hours={secondsOf(c.old)} detail={projectLabel(c.old.project_id, c.old.task_id)} />
                 <Side
-                  label={`Now in ${SOURCE_LABEL[src]}`}
-                  hours={c.incoming.seconds}
-                  detail={projectLabel(c.incoming.projectId, c.incoming.taskId)}
+                  label={isEdited(c.incoming) ? `Now in ${SOURCE_LABEL[src]}, corrected` : `Now in ${SOURCE_LABEL[src]}`}
+                  hours={now(c.incoming).seconds}
+                  was={isEdited(c.incoming) ? c.incoming.seconds : undefined}
+                  detail={projectLabel(now(c.incoming).projectId, now(c.incoming).taskId)}
+                  action={editorFor(c.incoming)}
                 />
                 <Choices
                   value={c.apply ? "apply" : "keep"}
@@ -474,6 +619,8 @@ export default function ReviewStep({
               and <strong>delete {result.remove.length}</strong>
             </>
           )}
+          {editedCount > 0 && <> ({editedCount} corrected by you)</>}
+          {skippedCount > 0 && <>, skipping {skippedCount} you chose to skip</>}
           . You can undo it from the import history.
         </p>
         <button
@@ -489,9 +636,23 @@ export default function ReviewStep({
   );
 }
 
-function Row({ who, date, children }: { who: string; date: string; children: React.ReactNode }) {
+function Row({
+  who,
+  date,
+  children,
+  bordered = true,
+}: {
+  who: string;
+  date: string;
+  children: React.ReactNode;
+  bordered?: boolean;
+}) {
   return (
-    <div className="grid grid-cols-[170px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,280px)] items-center gap-3 border-b border-light py-2.5 text-sm last:border-0">
+    <div
+      className={`grid grid-cols-[170px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,280px)] items-center gap-3 py-2.5 text-sm ${
+        bordered ? "border-b border-light last:border-0" : ""
+      }`}
+    >
       <span>
         <span className="block truncate font-medium text-navy">{who}</span>
         <span className="text-xs text-charcoal/70">{longDate(date)}</span>
@@ -501,11 +662,30 @@ function Row({ who, date, children }: { who: string; date: string; children: Rea
   );
 }
 
-function Side({ label, hours, detail }: { label: string; hours: number; detail: string }) {
+function Side({
+  label,
+  hours,
+  detail,
+  was,
+  action,
+}: {
+  label: string;
+  hours: number;
+  detail: string;
+  /** Hours in the file before a correction. */
+  was?: number;
+  action?: React.ReactNode;
+}) {
   return (
     <span className="min-w-0">
       <span className="block text-[11px] uppercase tracking-wide text-charcoal/50">{label}</span>
-      <span className="tabular font-semibold text-navy">{formatHoursShort(hours)}</span>
+      <span className="flex items-center gap-1.5">
+        <span className="tabular font-semibold text-navy">{formatHoursShort(hours)}</span>
+        {was !== undefined && was !== hours && (
+          <span className="tabular text-xs text-charcoal/50 line-through">{formatHoursShort(was)}</span>
+        )}
+        {action}
+      </span>
       <span className="block truncate text-xs text-charcoal/70" title={detail}>
         {detail}
       </span>

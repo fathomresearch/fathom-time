@@ -267,33 +267,106 @@ export function buildPlan(
   return plan;
 }
 
-/** Keys of entries left out of the import (remembered so a re-import doesn't ask again). */
-export function skippedKeys(plan: Plan) {
-  const keys: string[] = [];
-  for (const l of plan.long) if (!l.take) keys.push(l.entry.key);
-  for (const d of plan.duplicates) if (d.choice === "existing") keys.push(d.incoming.key);
-  for (const o of plan.overlaps) if (o.choice === "existing") keys.push(...o.incoming.map((x) => x.key));
-  for (const c of plan.changed) if (!c.apply) keys.push(c.incoming.key);
-  return keys;
+/** A correction made during review, by entry key. Missing fields keep the file's value. */
+export type EntryEdit = {
+  seconds?: number;
+  projectId?: string | null;
+  taskId?: string | null;
+  description?: string;
+  billable?: boolean;
+  /** Leave this entry out of the import. */
+  skip?: boolean;
+};
+export type Edits = Record<string, EntryEdit>;
+
+/** True when the edit changes what gets imported (not just skips it). */
+export const hasChanges = (x: EntryEdit | undefined) =>
+  !!x &&
+  (x.seconds !== undefined || x.projectId !== undefined || x.description !== undefined || x.billable !== undefined);
+
+/** The entry as it will be imported: same start, corrected length, project, task, note, billable. */
+export function withEdit(e: Incoming, x: EntryEdit | undefined): Incoming {
+  if (!hasChanges(x)) return e;
+  const seconds = x!.seconds ?? e.seconds;
+  return {
+    ...e,
+    seconds,
+    endAt: new Date(new Date(e.startAt).getTime() + seconds * 1000).toISOString(),
+    projectId: x!.projectId !== undefined ? x!.projectId : e.projectId,
+    taskId: x!.projectId !== undefined ? (x!.taskId ?? null) : e.taskId,
+    description: x!.description ?? e.description,
+    billable: x!.billable ?? e.billable,
+  };
 }
 
-/** What to write: entries to add and existing entries to delete. */
-export function applyPlan(plan: Plan) {
-  const add: Incoming[] = [...plan.fresh];
+/** Every entry the review can still decide on, with the group it sits in. */
+export type Group = "fresh" | "duplicates" | "overlaps" | "long" | "changed";
+export function reviewEntries(plan: Plan) {
+  const out: { entry: Incoming; group: Group; groupId: string }[] = [];
+  for (const e of plan.fresh) out.push({ entry: e, group: "fresh", groupId: "" });
+  for (const d of plan.duplicates) out.push({ entry: d.incoming, group: "duplicates", groupId: d.id });
+  for (const o of plan.overlaps) for (const e of o.incoming) out.push({ entry: e, group: "overlaps", groupId: o.id });
+  for (const l of plan.long) out.push({ entry: l.entry, group: "long", groupId: l.id });
+  for (const c of plan.changed) out.push({ entry: c.incoming, group: "changed", groupId: c.id });
+  return out;
+}
+
+/**
+ * After correcting an entry, choose the file's (corrected) version in its
+ * group: a corrected entry is one you want imported.
+ */
+export function preferCorrected(plan: Plan, keys: Set<string>): Plan {
+  return {
+    ...plan,
+    duplicates: plan.duplicates.map((d) =>
+      keys.has(d.incoming.key) && d.choice === "existing" ? { ...d, choice: "new" } : d
+    ),
+    overlaps: plan.overlaps.map((o) =>
+      o.incoming.some((e) => keys.has(e.key)) && o.choice === "existing" ? { ...o, choice: "new" } : o
+    ),
+    long: plan.long.map((l) => (keys.has(l.entry.key) ? { ...l, take: true } : l)),
+    changed: plan.changed.map((c) => (keys.has(c.incoming.key) ? { ...c, apply: true } : c)),
+  };
+}
+
+/** Keys of entries left out of the import (remembered so a re-import doesn't ask again). */
+export function skippedKeys(plan: Plan, edits: Edits = {}) {
+  const keys = new Set<string>();
+  for (const l of plan.long) if (!l.take) keys.add(l.entry.key);
+  for (const d of plan.duplicates) if (d.choice === "existing") keys.add(d.incoming.key);
+  for (const o of plan.overlaps) if (o.choice === "existing") o.incoming.forEach((x) => keys.add(x.key));
+  for (const c of plan.changed) if (!c.apply) keys.add(c.incoming.key);
+  for (const { entry } of reviewEntries(plan)) if (edits[entry.key]?.skip) keys.add(entry.key);
+  return [...keys];
+}
+
+/**
+ * What to write: entries to add (with corrections) and existing entries to
+ * delete. A skipped entry never deletes the one it would have replaced.
+ */
+export function applyPlan(plan: Plan, edits: Edits = {}) {
+  const skip = (e: Incoming) => !!edits[e.key]?.skip;
+  const add: Incoming[] = [];
+  const take = (e: Incoming) => {
+    if (!skip(e)) add.push(withEdit(e, edits[e.key]));
+  };
   const remove = new Set<string>();
-  for (const l of plan.long) if (l.take) add.push(l.entry);
+  plan.fresh.forEach(take);
+  for (const l of plan.long) if (l.take) take(l.entry);
   for (const d of plan.duplicates) {
+    if (skip(d.incoming)) continue;
     if (d.choice === "new") remove.add(d.existing.id);
-    if (d.choice !== "existing") add.push(d.incoming);
+    if (d.choice !== "existing") take(d.incoming);
   }
   for (const o of plan.overlaps) {
+    if (o.incoming.every(skip)) continue;
     if (o.choice === "new") o.existing.forEach((x) => remove.add(x.id));
-    if (o.choice !== "existing") add.push(...o.incoming);
+    if (o.choice !== "existing") o.incoming.forEach(take);
   }
   for (const c of plan.changed) {
-    if (c.apply) {
+    if (c.apply && !skip(c.incoming)) {
       remove.add(c.old.id);
-      add.push(c.incoming);
+      take(c.incoming);
     }
   }
   for (const r of plan.removed) if (r.remove) remove.add(r.entry.id);
