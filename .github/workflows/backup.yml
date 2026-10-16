@@ -1,6 +1,6 @@
-# Nightly database backup (Supabase free has no backups).
+# Weekly database backup (Supabase free has no backups).
 # Dump commands from https://supabase.com/docs/guides/deployment/ci/backups.
-# Each night's copy is saved to a private Cloudflare R2 bucket and kept
+# Each week's copy is saved to a private Cloudflare R2 bucket and kept
 # forever (backups/fathom-time-YYYY-MM-DD.tar.gz). Nothing is stored on GitHub.
 #
 # Repo secrets needed (Settings > Secrets and variables > Actions):
@@ -10,15 +10,15 @@
 #   R2_SECRET_ACCESS_KEY
 # Bucket name: fathom-time-backups (change R2_BUCKET below if it differs).
 
-name: Nightly backup
+name: Weekly backup
 
 on:
   schedule:
-    - cron: "0 8 * * *" # 08:00 UTC = 3 AM Chicago (2 AM in winter)
+    - cron: "0 8 * * 0" # Sundays, 08:00 UTC = 3 AM Chicago (2 AM in winter)
   workflow_dispatch: # "Run workflow" button in the Actions tab
 
 permissions:
-  actions: write # to remove the backup copies earlier versions of this job left on GitHub
+  actions: write # keep the scheduled jobs turned on; remove old backup copies left on GitHub
   contents: read
 
 env:
@@ -28,6 +28,14 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
+      # GitHub turns off scheduled jobs after 60 quiet days; see keep-awake.yml.
+      - name: Keep the scheduled jobs turned on
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow enable backup.yml --repo "$GITHUB_REPOSITORY"
+          gh workflow enable keep-awake.yml --repo "$GITHUB_REPOSITORY"
+
       - name: Check the secrets are set
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}

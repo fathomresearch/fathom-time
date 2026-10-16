@@ -6,12 +6,19 @@ and whether it is live. Code-level detail lives in `CLAUDE.md` and the git histo
 
 ## Current status (updated 2026-10-06)
 
-- **Live:** https://time.fathomresearch.ai, served by **GitHub Pages** from the public repo `fathomresearch/fathom-time`; every push to `main` publishes (free, effectively unlimited). Data and sign-in: **Supabase**. Backups: nightly to Cloudflare R2 (`fathom-time-backups`, kept forever). Keep-awake job Mon/Thu.
+- **Live:** https://time.fathomresearch.ai, served by **GitHub Pages** from the public repo `fathomresearch/fathom-time`; every push to `main` publishes (free, effectively unlimited). Data and sign-in: **Supabase**. Backups: weekly (Sundays) to Cloudflare R2 (`fathom-time-backups`, kept forever). Keep-awake job Mon/Thu. Both jobs keep themselves running without anyone watching.
 - **Old address** https://fathom-time.netlify.app still runs the Oct 2 version against the same database; to be deleted when the product is finished (builds can be stopped in Netlify meanwhile).
 - **Database:** migrations 001 to 008 run. Security test (`supabase/tests/rls_check.sql`): 40 checks.
 - **Next:** run migration 009, push, then do the real import (practice clean-up first). Then contribution-based pay (Later).
 
 ---
+
+## 2026-10-16: Runs on its own; weekly backups; clean start
+
+- **Nothing to babysit:** GitHub turns off scheduled jobs in public repos after 60 days with no activity. Both scheduled jobs now turn themselves back on every run, and the keep-awake job saves a one-line date note to a separate `keepalive` branch about once a month (never `main`, so the website and your pushes are unaffected).
+- **Backups are weekly** (Sundays, 3 AM Chicago) instead of nightly; still kept forever in R2.
+- **Imports undone** (both Clockify files) and `supabase/seed/clean_start_projects.sql` added to remove clients, projects and tasks with no time and forget remembered import matches, for a clean one-time import later. The team switches to Fathom Time on Sunday Oct 18.
+- **Live:** after a push.
 
 ## 2026-10-07: Fix imported data by hand
 
