@@ -428,7 +428,8 @@ function Block({ seg, catalog, tz, onOpen }: { seg: Seg; catalog: Catalog; tz: s
   const color = project?.color ?? "#BBBCC0";
   const height = Math.max(px(seg.bottom - seg.top), px(SNAP)) - 2;
   const times = `${formatTime(item.start, tz)} – ${formatTime(item.end, tz)}`;
-  const title = item.draft.description || (item.running ? "Timer running" : "(no description)");
+  // Project, task, description, then time; empty ones are skipped.
+  const lines = [project?.name, task?.name, item.draft.description].filter(Boolean) as string[];
   const canDrag = !!item.entry && !item.running && !item.ghost;
 
   return (
@@ -442,7 +443,7 @@ function Block({ seg, catalog, tz, onOpen }: { seg: Seg; catalog: Catalog; tz: s
       onKeyDown={(e) => {
         if (canDrag && e.key === "Enter") onOpen(item.entry!);
       }}
-      title={item.running ? "Timer running. Stop or edit it in the bar above." : `${title}\n${times}`}
+      title={item.running ? "Timer running. Stop or edit it in the bar above." : [...lines, times].join("\n")}
       className={`absolute overflow-hidden rounded-md border px-1.5 text-xs leading-tight ${
         item.ghost || item.editing ? "z-10 shadow-md" : ""
       } ${item.running ? "animate-pulse" : ""} ${canDrag ? "cursor-grab" : ""}`}
@@ -459,19 +460,17 @@ function Block({ seg, catalog, tz, onOpen }: { seg: Seg; catalog: Catalog; tz: s
     >
       {height < 30 ? (
         <div className="truncate pt-px text-navy">
-          <span className="font-medium">{title}</span>
-          <span className="text-charcoal/70">, {formatTime(item.start, tz)}</span>
+          {lines[0] && <span className="font-medium">{lines[0]}, </span>}
+          <span className="text-charcoal/70">{formatTime(item.start, tz)}</span>
         </div>
       ) : (
         <div className="pt-0.5">
-          <div className="truncate font-medium text-navy">{title}</div>
-          <div className="tabular truncate text-charcoal/80">{times}</div>
-          {project && height >= 48 && (
-            <div className="truncate text-charcoal/70">
-              {project.name}
-              {task ? `: ${task.name}` : ""}
+          {lines.map((line, i) => (
+            <div key={i} className={`truncate ${i === 0 ? "font-medium text-navy" : "text-charcoal"}`}>
+              {line}
             </div>
-          )}
+          ))}
+          <div className="tabular truncate text-charcoal/70">{times}</div>
         </div>
       )}
       {canDrag && seg.last && <div data-resize className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize" />}
