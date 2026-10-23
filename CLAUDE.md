@@ -73,7 +73,7 @@ The site needs only these two (the same two are GitHub secrets for the publish j
 - `src/lib/session.tsx`: `SessionProvider` (used by the `(app)` layout: no session → /login, deactivated → signed out) and `useSession()` → `{ profile, viewer, reloadProfile }`; `signOut()`.
 - `src/lib/teamActions.ts`: `setRole`, `setActive` (`set_person_active()`), `createFormerMembers` (`create_former_member()`), `linkPerson` / `unlinkPerson`.
 - `src/lib/supabase/`: `client.ts` (browser client), `browser.ts` (shared `sb()`).
-- `src/components/tracker/`: `TimeTracker` (takes `ownerId` + `viewer`, reusable for the Phase 7 person page), `useEntries` (load, 20 s refresh, all mutations), `EntryBar`, `EntryList`, `EntryRow`, `ProjectPicker` (+ `CreateProjectForm`), `TagPicker`, `DatePicker`, `Popover`, `InlineInput`, `BillableToggle`.
+- `src/components/tracker/`: `TimeTracker` (takes `ownerId` + `viewer`, reusable for the Phase 7 person page; List / Calendar switch remembered in localStorage `fathom-time:tracker-view`), `WeekCalendar` (week grid: click = 1h block, drag = range in 15-min steps, drag block to move, Option-drag to copy, bottom edge to resize) + `BlockEditor` (card for a block; `parseDateInput` in `time.ts`), `useEntries` (load, 20 s refresh, all mutations), `EntryBar`, `EntryList`, `EntryRow`, `ProjectPicker` (+ `CreateProjectForm`), `TagPicker`, `DatePicker`, `Popover`, `InlineInput`, `BillableToggle`.
 - `src/components/Toaster.tsx` (`toast("...")`), `ConfirmDialog.tsx`, `NoAccess.tsx`, `PageHeader.tsx`, `Sidebar.tsx`.
 - Pages (all client): `src/app/(app)/{tracker,timesheet,projects,team,team/person,team/project,team/import,team/entries,settings}`, `src/app/login`, `src/app/auth/callback`.
 

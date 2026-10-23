@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sb } from "@/lib/supabase/browser";
 import { toast } from "@/components/Toaster";
 import { ENTRY_SELECT, toEntry, type Draft, type Entry } from "@/lib/data";
-import { addDays, dayKey, startOfDay, weekStart } from "@/lib/time";
+import { addDays, dayKey, daysBetween, startOfDay, weekStart } from "@/lib/time";
 
 type EntryPatch = Partial<
   Pick<Entry, "description" | "project_id" | "task_id" | "billable" | "start_at" | "end_at">
@@ -193,19 +193,19 @@ export function useEntries(ownerId: string, viewerId: string, tz: string) {
       const created = await insertEntry(draft, start, end);
       if (!created) {
         failed("Couldn't add that entry.");
-        return false;
+        return null;
       }
       setEntries((cur) =>
         [created, ...cur].sort((a, b) => b.start_at.localeCompare(a.start_at))
       );
-      return true;
+      return created;
     },
     [ownerId] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const duplicateEntry = useCallback(
-    async (entry: Entry) => {
-      const created = await insertEntry(entry, new Date(entry.start_at), new Date(entry.end_at!));
+    async (entry: Entry, start = new Date(entry.start_at), end = new Date(entry.end_at!)) => {
+      const created = await insertEntry(entry, start, end);
       if (!created) return failed("Couldn't duplicate that entry.");
       setEntries((cur) => [created, ...cur].sort((a, b) => b.start_at.localeCompare(a.start_at)));
     },
@@ -218,12 +218,22 @@ export function useEntries(ownerId: string, viewerId: string, tz: string) {
     if (error) failed("Couldn't delete that entry.");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** Make sure entries from the week starting `weekKey` are loaded (the Calendar going back). */
+  const showWeek = useCallback(
+    (weekKey: string) => {
+      const back = Math.floor(daysBetween(weekKey, weekStart(dayKey(new Date(), tz))) / 7) + 1;
+      setWeeks((w) => Math.max(w, back));
+    },
+    [tz]
+  );
+
   return {
     loaded,
     entries,
     running,
     hasMore,
     loadMore: () => setWeeks((w) => w + 3),
+    showWeek,
     weeks,
     reload: load,
     updateEntry,

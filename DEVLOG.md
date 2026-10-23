@@ -13,6 +13,15 @@ and whether it is live. Code-level detail lives in `CLAUDE.md` and the git histo
 
 ---
 
+## 2026-10-23: Calendar view on the Time Tracker
+
+- The Time Tracker (and a team member's page) has a **List / Calendar** switch above the entries; the choice is remembered on that computer. Calendar is a Google Calendar style week (Sun to Sat) with week navigation, day totals, a red "now" line, and blocks colored by project.
+- **Click** an empty slot for a 1-hour block, or **drag** down for any length (15-minute steps, e.g. 4:00 to 7:15). A card opens to add notes, project/task, tags and billable, and to type exact start, end, length and date (e.g. "Oct 24", "10/24").
+- **Drag a block** to move it to another time or day; **hold Option** while dragging to copy it instead. **Drag its bottom edge** to change the end. **Click** a block to edit, duplicate (the copy opens so you can type a new date) or delete.
+- The running timer shows as a live block; stop or edit it in the bar.
+- **Database:** no change.
+- **Live:** after a push.
+
 ## 2026-10-16: Runs on its own; weekly backups; clean start
 
 - **Nothing to babysit:** GitHub turns off scheduled jobs in public repos after 60 days with no activity. Both scheduled jobs now turn themselves back on every run, and the keep-awake job saves a one-line date note to a separate `keepalive` branch about once a month (never `main`, so the website and your pushes are unaffected).

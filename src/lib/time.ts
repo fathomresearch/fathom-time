@@ -119,10 +119,20 @@ export function shortDate(key: string): string {
   return `${MONTHS[m - 1]} ${d}`;
 }
 
+/** "Fri, Oct 23" */
+export function weekdayDate(key: string): string {
+  return `${DAYS[weekday(key)]}, ${shortDate(key)}`;
+}
+
+/** "SUN" style short weekday name. */
+export function weekdayShort(key: string): string {
+  return DAYS[weekday(key)];
+}
+
 export function dayLabel(key: string, todayKey: string): string {
   if (key === todayKey) return "Today";
   if (key === addDays(todayKey, -1)) return "Yesterday";
-  return `${DAYS[weekday(key)]}, ${shortDate(key)}`;
+  return weekdayDate(key);
 }
 
 export function weekLabel(startKey: string, todayKey: string): string {
@@ -240,6 +250,41 @@ export function parseDurationInput(
     return Math.floor(n / 100) * 3600 + (n % 100) * 60;
   }
   return null;
+}
+
+/**
+ * Loose date input -> day key, or null. `ref` (a day key) supplies the year
+ * and the meaning of today/yesterday/tomorrow.
+ * Accepts 2026-10-24, 10/24, 10/24/26, Oct 24, 24 Oct, Fri, Oct 24, today.
+ */
+export function parseDateInput(raw: string, ref: string): string | null {
+  let s = raw.trim().toLowerCase().replace(/\s+/g, " ");
+  if (s === "today") return ref;
+  if (s === "yesterday") return addDays(ref, -1);
+  if (s === "tomorrow") return addDays(ref, 1);
+  s = s.replace(/^(sun|mon|tue|wed|thu|fri|sat)[a-z]*,? ?/, "");
+  const month = (name: string) => {
+    const i = MONTHS.findIndex((m) => name.startsWith(m.toLowerCase()));
+    return i < 0 ? NaN : i + 1;
+  };
+  let y = parseKey(ref).y, m = NaN, d = NaN;
+  let r: RegExpMatchArray | null;
+  if ((r = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) {
+    [y, m, d] = [Number(r[1]), Number(r[2]), Number(r[3])];
+  } else if ((r = s.match(/^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/))) {
+    [m, d] = [Number(r[1]), Number(r[2])];
+    if (r[3]) y = r[3].length === 2 ? 2000 + Number(r[3]) : Number(r[3]);
+  } else if ((r = s.match(/^([a-z]{3,})\.? (\d{1,2})(?:,? (\d{4}))?$/) ?? s.match(/^([a-z]{3,})\.?(\d{1,2})$/))) {
+    [m, d] = [month(r[1]), Number(r[2])];
+    if (r[3]) y = Number(r[3]);
+  } else if ((r = s.match(/^(\d{1,2}) ?([a-z]{3,})\.?(?:,? (\d{4}))?$/))) {
+    [m, d] = [month(r[2]), Number(r[1])];
+    if (r[3]) y = Number(r[3]);
+  }
+  if (!m || !d) return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return `${y}-${pad(m)}-${pad(d)}`;
 }
 
 /** A real IANA time zone name, like "America/Chicago". */
